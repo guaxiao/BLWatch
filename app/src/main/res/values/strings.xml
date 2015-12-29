@@ -1,0 +1,37 @@
+<resources>
+    <string name="app_name">BluetoothLeWatch</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <string name="action_settings">设置</string>
+    <string name="action_reset_db">重置数据库</string>
+    <string name="action_simulation_db">模拟注入数据</string>
+    <string name="action_break_link">断开链接</string>
+
+    <string name="nav_walk_title">健身</string>
+    <string name="nav_history_title">历史</string>
+    <string name="nav_watch_list_title">设备列表</string>
+    <string name="nav_manage_title">工具</string>
+    <string name="nav_share_title">分享</string>
+    <string name="nav_send_title">发送</string>
+
+    <string name="unknown_characteristic">Unknown characteristic</string>
+    <string name="unknown_service">Unknown service</string>
+    <string name="unknown_device">未知设备</string>
+    <string name="ble_not_supported">err:设备不支持BLE</string>
+    <string name="bluetooth_not_supported">err:设备不支持蓝牙</string>
+
+    <string name="le_scan_active">扫描中...</string>
+    <string name="device_null">未连接设备</string>
+
+    <string name="heart_calculating">测量中</string>
+    <string name="heart_nil"> </string>
+    <string name="step_counting">计步中</string>
+    <string name="step_nil">未连接</string>
+
+    <string name="weight_counting_info">体重</string>
+    <string name="weight_counting">测量中</string>
+
+
+</resources>
