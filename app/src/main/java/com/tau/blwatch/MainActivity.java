@@ -220,10 +220,11 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_share) {
             Toast.makeText(this, " 开发中...",
                     Toast.LENGTH_SHORT).show();
-        } else if (id == R.id.nav_send) {
-            Toast.makeText(this, " 开发中...",
-                    Toast.LENGTH_SHORT).show();
         }
+//        } else if (id == R.id.nav_send) {
+//            Toast.makeText(this, " 开发中...",
+//                    Toast.LENGTH_SHORT).show();
+//        }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
@@ -269,7 +270,7 @@ public class MainActivity extends AppCompatActivity
         long blockTime = (endTime - startTime) / blockNum;
         long blockStartTime = startTime;
         long blockEndTime = blockStartTime + blockTime;
-        Log.d("onSelectHeartData","blockStartTime="+blockStartTime);
+        Log.d("onSelectHeartData","blockStartTime=" + blockStartTime);
         Log.d("onSelectHeartData", "blockEndTime=" + blockEndTime);
 
         for(int i = 0;i < blockNum;i++){

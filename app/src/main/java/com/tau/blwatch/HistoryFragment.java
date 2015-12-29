@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import lecho.lib.hellocharts.gesture.ZoomType;
 import lecho.lib.hellocharts.listener.ComboLineColumnChartOnValueSelectListener;
 import lecho.lib.hellocharts.model.Axis;
 import lecho.lib.hellocharts.model.Column;
@@ -62,7 +63,7 @@ public class HistoryFragment extends Fragment {
 
     private int numberOfLines = 1;
     private int maxNumberOfLines = 4;
-    private int numberOfPoints = 30;
+    private int numberOfPoints = 12;
 
     float[][] randomNumbersTab = new float[maxNumberOfLines][numberOfPoints];
 
@@ -117,17 +118,17 @@ public class HistoryFragment extends Fragment {
     public final static long MI_SECOND_WEEK = (long)7 * 24 * 3600 * 1000;
     public final static long MI_SECOND_DAY = (long)24 * 3600 * 1000;
 
-    public final static int CHART_TIME_SUM = 0;
+    public final static int CHART_TIME_SUM = 99;
     public final static int CHART_TIME_YEAR = 1;
     public final static int CHART_TIME_QUARTER = 2;
     public final static int CHART_TIME_MONTH = 3;
     public final static int CHART_TIME_WEEK = 4;
     public final static int CHART_TIME_DAY = 5;
 
-    public final static int CHART_TYPE_SUM = 0;
-    public final static int CHART_TYPE_STEP = 1;
-    public final static int CHART_TYPE_HEART = 2;
-    public final static int CHART_TYPE_WEIGHT = 3;
+    public final static int CHART_TYPE_SUM = 99;
+    public final static int CHART_TYPE_STEP = 0;
+    public final static int CHART_TYPE_HEART = 1;
+    public final static int CHART_TYPE_WEIGHT = 10;
 
     private int mTimeOfChart = 1;
     private int mTypeOfChart = 1;
@@ -229,7 +230,28 @@ public class HistoryFragment extends Fragment {
             public void onItemClick(View view, int position) {
                 Toast.makeText(getActivity(), position + " click",
                         Toast.LENGTH_SHORT).show();
-                prepareDataAnimation();
+                prepareDataAnimation(); //随机动画
+                switch (position){
+                    case 0:
+                        mTimeOfChart = CHART_TIME_SUM;
+                        break;
+                    case 1:
+                        mTimeOfChart = CHART_TIME_YEAR;
+                        break;
+                    case 2:
+                        mTimeOfChart = CHART_TIME_QUARTER;
+                        break;
+                    case 3:
+                        mTimeOfChart = CHART_TIME_MONTH;
+                        break;
+                    case 4:
+                        mTimeOfChart = CHART_TIME_WEEK;
+                        break;
+                    case 5:
+                        mTimeOfChart = CHART_TIME_DAY;
+                        break;
+
+                }
             }
         });
         mTimeRecyclerView.setAdapter(mTimeRecyclerAdapter);
@@ -248,6 +270,24 @@ public class HistoryFragment extends Fragment {
             public void onItemClick(View view, int position) {
                 Toast.makeText(getActivity(), position + " click",
                         Toast.LENGTH_SHORT).show();
+                switch (position){
+                    case 0:
+                        generateData();
+                        mTypeOfChart = CHART_TYPE_SUM;
+                        break;
+                    case 1:
+                        generateData(CHART_TYPE_STEP);
+                        mTypeOfChart = CHART_TYPE_STEP;
+                        break;
+                    case 2:
+                        generateData(CHART_TYPE_HEART);
+                        mTypeOfChart = CHART_TYPE_HEART;
+                        break;
+                    case 3:
+                        generateData(CHART_TYPE_WEIGHT);
+                        mTypeOfChart = CHART_TYPE_WEIGHT;
+                        break;
+                }
             }
         });
         mTypeRecyclerView.setAdapter(mTypeRecyclerAdapter);
@@ -286,6 +326,12 @@ public class HistoryFragment extends Fragment {
         }
         mStatisticsCollection.putAll(tempMap);
         Log.d("onSelectHeartData",mStatisticsCollection.toString());
+
+        for (int i = 0; i < maxNumberOfLines; ++i) {
+            for (int j = 0; j < numberOfPoints; ++j) {
+                randomNumbersTab[i][j] = (float) Math.random() * 50f + 5;
+            }
+        }
     }
 
     private void generateValues(int tagOfLine) {
@@ -297,13 +343,32 @@ public class HistoryFragment extends Fragment {
         data = new ComboLineColumnChartData(generateColumnData(), generateLineData());
 
         Axis axisX = new Axis();
+        Axis axisY = new Axis().setHasLines(true);
         data.setAxisXBottom(axisX);
+        data.setAxisYLeft(axisY);
+        chart.setZoomType(ZoomType.HORIZONTAL);
 
         chart.setComboLineColumnChartData(data);
+//        chart.startDataAnimation();
+    }
+
+    private void generateData(int dataFlag) {
+        if(dataFlag == CHART_TYPE_WEIGHT)
+            data = new ComboLineColumnChartData(generateColumnData(), null);
+        else
+            data = new ComboLineColumnChartData(null, generateLineData(dataFlag));
+
+        Axis axisX = new Axis();
+        Axis axisY = new Axis().setHasLines(true);
+        data.setAxisXBottom(axisX);
+        data.setAxisYLeft(axisY);
+        chart.setZoomType(ZoomType.HORIZONTAL);
+
+        chart.setComboLineColumnChartData(data);
+//        chart.startDataAnimation();
     }
 
     private LineChartData generateLineData() {
-
         List<Line> lines = new ArrayList<Line>();
         for (int i = 0; i < numberOfLines; ++i) {
 

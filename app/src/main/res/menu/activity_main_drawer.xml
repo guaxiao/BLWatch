@@ -11,21 +11,15 @@
         <item android:id="@+id/nav_watch_list"
             android:icon="@mipmap/list"
             android:title="@string/nav_watch_list_title" />
+    </group>
+
+    <group android:checkableBehavior="single">
         <item android:id="@+id/nav_manage"
             android:icon="@android:drawable/ic_menu_manage"
             android:title="@string/nav_manage_title"
             android:checkable="false"/>
+        <item android:id="@+id/nav_share" android:icon="@android:drawable/ic_menu_share"
+            android:title="@string/nav_share_title"
+            android:checkable="false"/>
     </group>
-
-    <item android:title="Communicate">
-        <menu>
-            <item android:id="@+id/nav_share" android:icon="@android:drawable/ic_menu_share"
-                android:title="@string/nav_share_title"
-                android:checkable="false"/>
-            <item android:id="@+id/nav_send" android:icon="@android:drawable/ic_menu_send"
-                android:title="@string/nav_send_title"
-                android:checkable="false"/>
-        </menu>
-    </item>
-
 </menu>
