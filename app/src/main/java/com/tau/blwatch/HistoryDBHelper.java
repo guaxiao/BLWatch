@@ -33,17 +33,17 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     public final static String VALUE_WEIGHT = "value_weight";
     public final static String CASE_TIME_BLOCK = "time_block";
 
-    public final static int SIZE_OF_SELECT_HEART = 3;
-    public final static int SIZE_OF_SELECT_STEP = 1;
-    public final static int SIZE_OF_SELECT_WEIGHT = 1;
-
     public final static int SQLITE_DATE_PER_JAVA_DATE = 1000;
+
+    public final static int TYPE_BLOCK_MONTH = 1;
+    public final static int TYPE_BLOCK_DAY = 2;
+    public final static int TYPE_BLOCK_HOUR = 3;
 
     //以下为模拟注入数据时使用的量
     private long writeTime = 0L;
     public final static String sDeviceAdd = "00:2C:00:00:00:FF";
-    public final static long sStepIntervals =  5 * 60 * 1000;   //步数数据库计入间隔5分钟
-    public final static long sHeartIntervals = 5 * 60 * 1000;   //心跳数据库计入间隔5分钟
+    public final static long sTestIntervals =  5 * 60 * 1000;   //测试数据数据库计入间隔5分钟
+    public final static long sHeartAndStepIntervals = 5 * 60 * 1000;   //心跳数据库计入间隔5分钟
     public final static long sWeightIntervals = 8 * 60 * 60 * 1000; //体重数据库计入间隔8小时
     public final static long sSumTime = (long)365 * 24 * 3600 * 1000; //模拟注入时间跨度一年
 
@@ -80,30 +80,51 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     @Override
     public void onCreate(SQLiteDatabase db) {
         //创建表记录心跳
-        String sql = "CREATE TABLE " + HEART_TABLE_NAME + "(" +
-                INFO_ID + " INTEGER " + "primary key autoincrement," +
-                INFO_TIME + " INTEGER ," +
-                INFO_DEVICE_ADD + " TEXT ," +
-                AVG_HEART + " INTEGER ," +
-                MAX_HEART + " INTEGER ," +
-                MIN_HEART + " INTEGER " +");";
-        db.execSQL(sql);
+        createTable(db, HEART_TABLE_NAME);
 
         //创建表记录步数
-        sql = "CREATE TABLE " + STEP_TABLE_NAME + "(" +
-                INFO_ID + " INTEGER " + "primary key autoincrement," +
-                INFO_TIME + " INTEGER ," +
-                INFO_DEVICE_ADD + " TEXT ," +
-                VALUE_STEP + " INTEGER " + ");";
-        db.execSQL(sql);
+        createTable(db,STEP_TABLE_NAME);
 
         //创建表记录体重
-        sql = "CREATE TABLE " + WEIGHT_TABLE_NAME + "(" +
-                INFO_ID + " INTEGER " + "primary key autoincrement," +
-                INFO_TIME + " INTEGER ," +
-                INFO_DEVICE_ADD + " TEXT ," +
-                VALUE_WEIGHT + " INTEGER " + ");";
-        db.execSQL(sql);
+        createTable(db, WEIGHT_TABLE_NAME);
+    }
+
+    public void createTable(SQLiteDatabase db, String tableName){
+        String sql = "nil";
+        switch (tableName){
+            case HEART_TABLE_NAME:
+                sql = "CREATE TABLE " + HEART_TABLE_NAME + "(" +
+                        INFO_ID + " INTEGER " + "primary key autoincrement," +
+                        INFO_TIME + " INTEGER ," +
+                        INFO_DEVICE_ADD + " TEXT ," +
+                        AVG_HEART + " INTEGER ," +
+                        MAX_HEART + " INTEGER ," +
+                        MIN_HEART + " INTEGER " +");";
+                break;
+            case STEP_TABLE_NAME:
+                sql = "CREATE TABLE " + STEP_TABLE_NAME + "(" +
+                        INFO_ID + " INTEGER " + "primary key autoincrement," +
+                        INFO_TIME + " INTEGER ," +
+                        INFO_DEVICE_ADD + " TEXT ," +
+                        VALUE_STEP + " INTEGER " + ");";
+                break;
+            case WEIGHT_TABLE_NAME:
+                sql = "CREATE TABLE " + WEIGHT_TABLE_NAME + "(" +
+                        INFO_ID + " INTEGER " + "primary key autoincrement," +
+                        INFO_TIME + " INTEGER ," +
+                        INFO_DEVICE_ADD + " TEXT ," +
+                        VALUE_WEIGHT + " INTEGER " + ");";
+                break;
+        }
+
+        if (!sql.equals("nil")) {
+            db.execSQL(sql);
+        }
+    }
+
+    public void createTable(String tableName){
+        SQLiteDatabase db = this.getWritableDatabase();
+        createTable(db,tableName);
     }
 
     //升级数据库
@@ -152,29 +173,36 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
 
     //按时间区间查询心跳
     public Cursor selectHeart(long startTime, long endTime){
+        startTime /= SQLITE_DATE_PER_JAVA_DATE;
+        endTime /= SQLITE_DATE_PER_JAVA_DATE;
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery(
-                "SELECT " + "avg(" + AVG_HEART + ")," + "max(" + MAX_HEART + ")," + "min(" + MIN_HEART + ")" +
+                "SELECT " + "avg(" + AVG_HEART + ")," + "avg(" + MAX_HEART + ")," + "avg(" + MIN_HEART + ")," +
+                        "strftime('%Y-%m'," + INFO_TIME + "," + "'unixepoch') as BLOCK_TIME" +
                         " FROM " + HEART_TABLE_NAME +
                         " WHERE " + INFO_TIME + ">=" + startTime +
                         " and " + INFO_TIME + "<" + endTime +
-                        " GROUP BY " + INFO_DEVICE_ADD, null);
+                        " GROUP BY " + "BLOCK_TIME", null);
         return cursor;
     }
 
     //按时间区间查询步数
     public Cursor selectStep(long startTime, long endTime){
+        startTime /= SQLITE_DATE_PER_JAVA_DATE;
+        endTime /= SQLITE_DATE_PER_JAVA_DATE;
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery(
                 "SELECT * FROM " + STEP_TABLE_NAME + " WHERE " +
                         INFO_TIME + ">=? and " + INFO_TIME + "<?",
-                new String[]{String.valueOf(startTime),String.valueOf(endTime)}
+                new String[]{String.valueOf(startTime), String.valueOf(endTime)}
         );
         return cursor;
     }
 
     //按时间区间查询体重
     public Cursor selectWeight(long startTime, long endTime){
+        startTime /= SQLITE_DATE_PER_JAVA_DATE;
+        endTime /= SQLITE_DATE_PER_JAVA_DATE;
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery(
                 "SELECT * FROM " + WEIGHT_TABLE_NAME + " WHERE " +
@@ -184,44 +212,42 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         return cursor;
     }
 
-    //清除心跳数据表
-    public void clearHeart(){
+    /**
+     * 清除指定的数据表
+     * @param tableName 表名
+     */
+    public void clearTable(String tableName){
         SQLiteDatabase db = this.getWritableDatabase();
-        String sql = "DROP TABLE IF EXISTS " + HEART_TABLE_NAME;
+        String sql = "DROP TABLE IF EXISTS " + tableName;
         db.execSQL(sql);
     }
 
-    //清除步数数据表
-    public void clearStep(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        String sql = "DROP TABLE IF EXISTS " + STEP_TABLE_NAME;
-        db.execSQL(sql);
-    }
-
-    //清除体重数据表
-    public void clearWeight(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        String sql = "DROP TABLE IF EXISTS " + WEIGHT_TABLE_NAME;
-        db.execSQL(sql);
+    /**
+     * 重置指定的数据表
+     * @param tableName 表名
+     */
+    public void resetTable(String tableName){
+        clearTable(tableName);
+        createTable(tableName);
     }
 
 
-    //重新创建数据表
+    /**
+     * 重置所有数据表
+     */
     public void resetTable(){
-        clearWeight();
-        clearStep();
-        clearHeart();
-        SQLiteDatabase db = this.getWritableDatabase();
-        onCreate(db);
+        resetTable(HEART_TABLE_NAME);
+        resetTable(STEP_TABLE_NAME);
+        resetTable(WEIGHT_TABLE_NAME);
     }
 
-    //模拟为期一年的数据注入
+    /**
+     *  模拟为期一年的全部数据注入
+     */
+//    public void simulateData(long sunTime, long intervalsTime, String tableName){
     public void simulateData(){
         final SQLiteDatabase db = this.getWritableDatabase();
-        clearHeart();
-        clearStep();
-        clearWeight();
-        onCreate(db);
+        resetTable();
 
         writeTime = new Date().getTime();
         Thread sThread = new Thread(new Runnable() {
@@ -233,10 +259,10 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
                 SimpleDateFormat mlSimpleDateFormat= new SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.US);
                 Random mlRandom = new Random();
                 db.beginTransaction();          //手动设置开始事务
-                                                // Transaction活动时间内所有的操作将被包装成统一的事务进行SQL操作
+                // Transaction活动时间内所有的操作将被包装成统一的事务进行SQL操作
 
                 //模拟注入心跳与步数
-                for(long i = sSumTime;i > 0;i -= sHeartIntervals + sTimeShake){
+                for(long i = sSumTime;i > 0;i -= sHeartAndStepIntervals + sTimeShake){
                     sTimeShake = (long)(Math.random() * 100);
 
                     //注入时间模拟
@@ -297,10 +323,26 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     }
 
     public void SQLTest(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        long timeNow = new Date().getTime();
-        Cursor cursor = db.rawQuery("SELECT strftime('%Y%m'," + "'now'" + ")",null);
-        cursor.moveToFirst();
-        Log.d("SQLTest", cursor.getString(0));
+        final SQLiteDatabase db = this.getWritableDatabase();
+        final long timeNow = new Date().getTime();
+//        final String sqlTest = "SELECT strftime('%Y%m'," + INFO_TIME + ")" +
+//                " FROM " + WEIGHT_TABLE_NAME;
+        final String sqlTest = "SELECT strftime('%Y-%m'," + INFO_TIME + "," + "'unixepoch')" +
+                " FROM " + STEP_TABLE_NAME;
+        Thread TThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+//                Cursor cursor = db.rawQuery(sqlTest,null);
+                Cursor cursor = selectHeart(timeNow - sSumTime, timeNow);
+                cursor.moveToFirst();
+                while(cursor.moveToNext()){
+                    Log.d("SQLTest", cursor.getString(0));
+                    Log.d("SQLTest", cursor.getString(1));
+                    Log.d("SQLTest", cursor.getString(2));
+                    Log.d("SQLTest", cursor.getString(3));
+                }
+            }
+        });
+        TThread.start();
     }
 }

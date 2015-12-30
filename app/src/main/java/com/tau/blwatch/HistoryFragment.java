@@ -318,12 +318,13 @@ public class HistoryFragment extends Fragment {
 
     private void generateValues() {
         HashMap<String,ArrayList<Float>> tempMap = new HashMap<>();
-        for (int j = 0; j < POINT_PER_LINE_OF_YEAR; ++j) {
-            long miSecondNow = new Date().getTime();
+//        for (int j = 0; j < POINT_PER_LINE_OF_YEAR; ++j) {
+//            long miSecondNow = new Date().getTime();
 //            tempMap = mSelectDBCallBack.onSelectHeartData(miSecondNow, miSecondNow + MI_SECOND_YEAR, POINT_PER_LINE_OF_YEAR);
 //            tempMap = mSelectDBCallBack.onSelectHeartData(miSecondNow - MI_SECOND_YEAR, miSecondNow, 3);    //for test
-            mSelectDBCallBack.onSQLTest();
-        }
+//
+//        }
+        mSelectDBCallBack.onSQLTest();
         mStatisticsCollection.putAll(tempMap);
         Log.d("onSelectHeartData",mStatisticsCollection.toString());
 
