@@ -1,12 +1,14 @@
 package com.tau.blwatch;
 
 import android.app.Activity;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextPaint;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -36,6 +38,7 @@ import lecho.lib.hellocharts.model.Line;
 import lecho.lib.hellocharts.model.LineChartData;
 import lecho.lib.hellocharts.model.PointValue;
 import lecho.lib.hellocharts.model.SubcolumnValue;
+import lecho.lib.hellocharts.model.Viewport;
 import lecho.lib.hellocharts.util.ChartUtils;
 import lecho.lib.hellocharts.view.ComboLineColumnChartView;
 
@@ -67,31 +70,8 @@ public class HistoryFragment extends Fragment {
 
     float[][] randomNumbersTab = new float[maxNumberOfLines][numberOfPoints];
 
-
-
     private int numberOfData = 3;
 
-    public static int DAY_PER_MONTH = 31;
-    public static int DAY_PER_QUARTER = 90;
-    static {
-        Calendar mCalendar = Calendar.getInstance();
-        mCalendar.set(Calendar.DATE, 1);
-        mCalendar.roll(Calendar.DATE, -1);
-        DAY_PER_MONTH = mCalendar.get(Calendar.DATE);   //1月=31/30/29/28天
-        DAY_PER_QUARTER = DAY_PER_MONTH;
-        mCalendar.add(Calendar.MONTH, -1);
-        DAY_PER_QUARTER += mCalendar.get(Calendar.DATE);
-        mCalendar.add(Calendar.MONTH, -1);
-        DAY_PER_QUARTER += mCalendar.get(Calendar.DATE);    //1季度=90/91天
-
-
-    }
-
-    public final static int POINT_PER_LINE_OF_YEAR = 12;    //1年=12个月
-    public final static int POINT_PER_LINE_OF_QUARTER = 13; //1季度=13个星期
-    public final static int POINT_PER_LINE_OF_MONTH = DAY_PER_MONTH;
-    public final static int POINT_PER_LINE_OF_WEEK = 7;     //1星期=7天
-    public final static int POINT_PER_LINE_OF_DAY = 24;      //1天=24小时
     private HashMap<String,ArrayList<Float>> mStatisticsCollection = new HashMap<>();
 
     private boolean hasAxes = false;
@@ -105,33 +85,28 @@ public class HistoryFragment extends Fragment {
     public final static int RECYCLER_VIEW_OF_TYPE = 2;
 
     private RecyclerView mTimeRecyclerView,mTypeRecyclerView;
-    private String[] mTimeDataList = {"总计","最近一年","近三个月","近一个月","最近一周","最近一天"};
-    private String[] mTypeDataList = {"    综合    ","    步数    ","    心率    ","    体重    "};
+    private String[] mTimeDataList = {"最近一天","最近一周","近一个月","近三个月","最近一年","总计"};
+    private String[] mTypeDataList = {"    步数    ","    心率    ","    体重    ","    综合    "};
     private LineRecyclerAdapter mTimeRecyclerAdapter,mTypeRecyclerAdapter;
 
-    private LineChartData mLineChartData = null;
-    private ColumnChartData mColumnChartData = null;
+    public final static String CHART_TIME_SUM = "sunTimeChart";
+    public final static String CHART_TIME_YEAR = "yearTimeChart";
+    public final static String CHART_TIME_QUARTER = "quarterTimeChart";
+    public final static String CHART_TIME_MONTH = "monthTimeChart";
+    public final static String CHART_TIME_WEEK = "weekTimeChart";
+    public final static String CHART_TIME_DAY = "dayTimeChart";
 
-    public final static long MI_SECOND_YEAR = (long)365 * 24 * 3600 * 1000;
-    public final static long MI_SECOND_QUARTER = (long)365 * 24 * 3600 * 1000;
-    public final static long MI_SECOND_MONTH = (long)DAY_PER_MONTH * 24 * 3600 * 1000;
-    public final static long MI_SECOND_WEEK = (long)7 * 24 * 3600 * 1000;
-    public final static long MI_SECOND_DAY = (long)24 * 3600 * 1000;
+    public final static String CHART_TYPE_SUM = "sunTypeChart";
+    public final static String CHART_TYPE_STEP = "stepTypeChart";
+    public final static String CHART_TYPE_HEART = "heartTypeChart";
+    public final static String CHART_TYPE_WEIGHT = "weightTypeChart";
 
-    public final static int CHART_TIME_SUM = 99;
-    public final static int CHART_TIME_YEAR = 1;
-    public final static int CHART_TIME_QUARTER = 2;
-    public final static int CHART_TIME_MONTH = 3;
-    public final static int CHART_TIME_WEEK = 4;
-    public final static int CHART_TIME_DAY = 5;
+    public final static int CHART_COLOR_STEP = 0;
+    public final static int CHART_COLOR_HEART = 1;
+    public final static int CHART_COLOR_WEIGHT = 2;
 
-    public final static int CHART_TYPE_SUM = 99;
-    public final static int CHART_TYPE_STEP = 0;
-    public final static int CHART_TYPE_HEART = 1;
-    public final static int CHART_TYPE_WEIGHT = 10;
-
-    private int mTimeOfChart = 1;
-    private int mTypeOfChart = 1;
+    private String mTagOfChartTime = null;
+    private String mTagOfChartType = null;
 
 
     /**
@@ -211,10 +186,11 @@ public class HistoryFragment extends Fragment {
         //初始化图表控件
         chart = (ComboLineColumnChartView) fragmentView.findViewById(R.id.chart);
         chart.setOnValueTouchListener(new ValueTouchListener());
+        mTagOfChartType = CHART_TYPE_HEART;
+        mTagOfChartTime = CHART_TIME_YEAR;
         //绘制图表
-        generateValues();
-        generateData();
-        addLineToData();
+        generateValues(mTagOfChartTime,mTagOfChartType);
+        generateChart(mTagOfChartTime,mTagOfChartType);
 
         //构建时间选择控件
         mTimeRecyclerView = (RecyclerView) fragmentView.findViewById(R.id.id_recycler_view_of_time);
@@ -230,27 +206,36 @@ public class HistoryFragment extends Fragment {
             public void onItemClick(View view, int position) {
                 Toast.makeText(getActivity(), position + " click",
                         Toast.LENGTH_SHORT).show();
-                prepareDataAnimation(); //随机动画
                 switch (position){
                     case 0:
-                        mTimeOfChart = CHART_TIME_SUM;
+                        mTagOfChartTime = CHART_TIME_DAY;
+                        generateValues(mTagOfChartTime,mTagOfChartType);
+                        generateChart(mTagOfChartTime, mTagOfChartType);
                         break;
                     case 1:
-                        mTimeOfChart = CHART_TIME_YEAR;
+                        mTagOfChartTime = CHART_TIME_WEEK;
+                        generateValues(mTagOfChartTime,mTagOfChartType);
+                        generateChart(mTagOfChartTime, mTagOfChartType);
                         break;
                     case 2:
-                        mTimeOfChart = CHART_TIME_QUARTER;
+                        mTagOfChartTime = CHART_TIME_MONTH;
+                        generateValues(mTagOfChartTime,mTagOfChartType);
+                        generateChart(mTagOfChartTime, mTagOfChartType);
                         break;
                     case 3:
-                        mTimeOfChart = CHART_TIME_MONTH;
+                        mTagOfChartTime = CHART_TIME_QUARTER;
+                        generateValues(mTagOfChartTime,mTagOfChartType);
+                        generateChart(mTagOfChartTime, mTagOfChartType);
                         break;
                     case 4:
-                        mTimeOfChart = CHART_TIME_WEEK;
+                        mTagOfChartTime = CHART_TIME_YEAR;
+                        generateValues(mTagOfChartTime,mTagOfChartType);
+                        generateChart(mTagOfChartTime, mTagOfChartType);
                         break;
                     case 5:
-                        mTimeOfChart = CHART_TIME_DAY;
+//                        mTagOfChartTime = CHART_TIME_SUM;
+//                        generateData(mTagOfChartTime,mTagOfChartType);
                         break;
-
                 }
             }
         });
@@ -272,21 +257,24 @@ public class HistoryFragment extends Fragment {
                         Toast.LENGTH_SHORT).show();
                 switch (position){
                     case 0:
-                        generateData();
-                        mTypeOfChart = CHART_TYPE_SUM;
+                        mTagOfChartType = CHART_TYPE_WEIGHT;
+                        generateValues(mTagOfChartTime,mTagOfChartType);
+                        generateChart(mTagOfChartTime, mTagOfChartType);
                         break;
                     case 1:
-                        generateData(CHART_TYPE_STEP);
-                        mTypeOfChart = CHART_TYPE_STEP;
+                        mTagOfChartType = CHART_TYPE_HEART;
+                        generateValues(mTagOfChartTime,mTagOfChartType);
+                        generateChart(mTagOfChartTime, mTagOfChartType);
                         break;
                     case 2:
-                        generateData(CHART_TYPE_HEART);
-                        mTypeOfChart = CHART_TYPE_HEART;
+                        mTagOfChartType = CHART_TYPE_STEP;
+                        generateValues(mTagOfChartTime,mTagOfChartType);
+                        generateChart(mTagOfChartTime,mTagOfChartType);
                         break;
-                    case 3:
-                        generateData(CHART_TYPE_WEIGHT);
-                        mTypeOfChart = CHART_TYPE_WEIGHT;
-                        break;
+//                    case 3:
+//                        generateData();
+//                        mTypeOfChart = CHART_TYPE_SUM;
+//                        break;
                 }
             }
         });
@@ -316,111 +304,178 @@ public class HistoryFragment extends Fragment {
 
     //-----------------------------------------helloCharts------------------------------------------
 
-    private void generateValues() {
-        HashMap<String,ArrayList<Float>> tempMap = new HashMap<>();
-//        for (int j = 0; j < POINT_PER_LINE_OF_YEAR; ++j) {
-//            long miSecondNow = new Date().getTime();
-//            tempMap = mSelectDBCallBack.onSelectHeartData(miSecondNow, miSecondNow + MI_SECOND_YEAR, POINT_PER_LINE_OF_YEAR);
-//            tempMap = mSelectDBCallBack.onSelectHeartData(miSecondNow - MI_SECOND_YEAR, miSecondNow, 3);    //for test
+//    private void generateValues() {
+//        mSelectDBCallBack.onSQLTest();
+//        Log.d("onSelectHeartData",mStatisticsCollection.toString());
 //
+//        for (int i = 0; i < maxNumberOfLines; ++i) {
+//            for (int j = 0; j < numberOfPoints; ++j) {
+//                randomNumbersTab[i][j] = (float) Math.random() * 50f + 5;
+//            }
 //        }
-        mSelectDBCallBack.onSQLTest();
-        mStatisticsCollection.putAll(tempMap);
-        Log.d("onSelectHeartData",mStatisticsCollection.toString());
+//    }
 
-        for (int i = 0; i < maxNumberOfLines; ++i) {
-            for (int j = 0; j < numberOfPoints; ++j) {
-                randomNumbersTab[i][j] = (float) Math.random() * 50f + 5;
-            }
+    /**
+     * 按特定的时间区块类型和图表数据类型，将数据库中的数值放入图表数据Map中
+     * @param tagOfTime 时间区块类型
+     * @param tagOfType 图表数据类型
+     */
+    private void generateValues(String tagOfTime,String tagOfType) {
+        HashMap<String,ArrayList<Float>> tempMap = new HashMap<>();
+        PropOfTimeBlock propOfTimeBlock = getPropOfBlockData(tagOfTime,tagOfType);
+        Log.d("propOfTimeBlock",propOfTimeBlock.toString());
+
+        boolean hasCached = false;
+        //构建本次构建图表数据时，应当记录入mStatisticsCollection的Key的关键字（即开始时间、时间片数量与时间片类型）
+        String selectDataColumnNameKey =
+                "StartTime:" + propOfTimeBlock.startTime
+                        + "-" + propOfTimeBlock.numBlock + " * " + propOfTimeBlock.typeTimeBlock
+                        + "From = " + propOfTimeBlock.tableName;
+
+        for (Map.Entry<String, ArrayList<Float>> entry : mStatisticsCollection.entrySet()) {
+            //如果Key的关键字在mStatisticsCollection中的Key列表中已经存在，则记本次构建指令命中缓存
+            if (entry.getKey().startsWith(selectDataColumnNameKey))
+                hasCached = true;
+        }
+
+        //当构建指令未命中缓存时，再向数据库查询数据
+        if(!hasCached){
+            tempMap = mSelectDBCallBack.onSelectData(
+                    propOfTimeBlock.startTime,
+                    propOfTimeBlock.numBlock,
+                    propOfTimeBlock.typeTimeBlock,
+                    propOfTimeBlock.tableName);
+            mStatisticsCollection.putAll(tempMap);
+            Log.d("mStatisticsCollection",mStatisticsCollection.toString());
         }
     }
 
-    private void generateValues(int tagOfLine) {
+//    private void generateData() {
+//        // Chart looks the best when line data and column data have similar maximum viewports.
+//        data = new ComboLineColumnChartData(generateColumnData(), generateLineData());
+//
+//        Axis axisX = new Axis();
+//        Axis axisY = new Axis().setHasLines(true);
+//        data.setAxisXBottom(axisX);
+//        data.setAxisYLeft(axisY);
+//        chart.setZoomType(ZoomType.HORIZONTAL);
+//
+//        chart.setComboLineColumnChartData(data);
+////        chart.startDataAnimation();
+//    }
 
-    }
-
-    private void generateData() {
-        // Chart looks the best when line data and column data have similar maximum viewports.
-        data = new ComboLineColumnChartData(generateColumnData(), generateLineData());
-
-        Axis axisX = new Axis();
-        Axis axisY = new Axis().setHasLines(true);
-        data.setAxisXBottom(axisX);
-        data.setAxisYLeft(axisY);
-        chart.setZoomType(ZoomType.HORIZONTAL);
-
-        chart.setComboLineColumnChartData(data);
-//        chart.startDataAnimation();
-    }
-
-    private void generateData(int dataFlag) {
-        if(dataFlag == CHART_TYPE_WEIGHT)
-            data = new ComboLineColumnChartData(generateColumnData(), null);
+    /**
+     * 按特定图表数据类型，将数据Map中的数据转换成图像
+     * @param tagOfType 图表数据类型
+     */
+    private void generateChart(String tagOfTime,String tagOfType) {
+        if(tagOfType.equals(CHART_TYPE_WEIGHT))
+            data = new ComboLineColumnChartData(generateColumnData(tagOfTime,tagOfType), null);
         else
-            data = new ComboLineColumnChartData(null, generateLineData(dataFlag));
+            data = new ComboLineColumnChartData(null, generateLineData(tagOfTime,tagOfType));
 
         Axis axisX = new Axis();
         Axis axisY = new Axis().setHasLines(true);
         data.setAxisXBottom(axisX);
         data.setAxisYLeft(axisY);
-        chart.setZoomType(ZoomType.HORIZONTAL);
 
         chart.setComboLineColumnChartData(data);
+        final Viewport v = new Viewport(chart.getMaximumViewport());
+
+        switch (tagOfType){
+            case CHART_TYPE_HEART:
+                v.bottom = 0;
+                v.top = v.top * 1.1F;
+                chart.setMaximumViewport(v);
+                chart.setCurrentViewport(v);
+                break;
+
+            case CHART_TYPE_STEP:
+                chart.resetViewports();
+                break;
+
+            case CHART_TYPE_WEIGHT:
+                v.bottom = 0;
+                v.top = 140;
+                chart.setMaximumViewport(v);
+                chart.setCurrentViewport(v);
+                break;
+        }
+
+        chart.setZoomType(ZoomType.HORIZONTAL);
 //        chart.startDataAnimation();
     }
 
-    private LineChartData generateLineData() {
+//    private LineChartData generateLineData() {
+//        List<Line> lines = new ArrayList<Line>();
+//        for (int i = 0; i < numberOfLines; ++i) {
+//
+//            List<PointValue> values = new ArrayList<PointValue>();
+//            for (int j = 0; j < numberOfPoints; ++j) {x34
+//                values.add(new PointValue(j, randomNumbersTab[i][j]).setLabel("" + (int)randomNumbersTab[i][j]));
+//            }
+//
+//            Line line = new Line(values);
+//            line.setColor(ChartUtils.COLORS[i]);
+//            line.setCubic(isCubic);
+//            line.setHasLabels(hasLabels);
+//            line.setHasLines(hasLines);
+//            line.setHasPoints(hasPoints);
+//            lines.add(line);
+//        }
+//
+//        LineChartData lineChartData = new LineChartData(lines);
+//
+//        return lineChartData;
+//
+//    }
+
+    private LineChartData generateLineData(String tagOfTime,String tagOfType) {
         List<Line> lines = new ArrayList<Line>();
-        for (int i = 0; i < numberOfLines; ++i) {
+        PropOfTimeBlock propOfTimeBlock = getPropOfBlockData(tagOfTime,tagOfType);
 
-            List<PointValue> values = new ArrayList<PointValue>();
-            for (int j = 0; j < numberOfPoints; ++j) {
-                values.add(new PointValue(j, randomNumbersTab[i][j]).setLabel("" + (int)randomNumbersTab[i][j]));
+        String selectDataColumnNameKey =
+                "StartTime:" + propOfTimeBlock.startTime
+                        + "-" + propOfTimeBlock.numBlock + " * " + propOfTimeBlock.typeTimeBlock
+                        + "From = " + propOfTimeBlock.tableName;
+
+        boolean hasCached = false;
+        int countColor = 0;
+        for (Map.Entry<String, ArrayList<Float>> entry : mStatisticsCollection.entrySet()) {
+            //如果找到mStatisticsCollection中有关于selectDataColumnNameKey的记录
+            if (entry.getKey().startsWith(selectDataColumnNameKey)){
+                //将此记录录入line中
+                ArrayList<Float> tempList = entry.getValue();
+                List<PointValue> values = new ArrayList<PointValue>();
+
+                for(int j = 0; j < tempList.size(); j++){
+                    values.add(new PointValue(j, tempList.get(j)));
+                }
+
+                Line line = new Line(values);
+                //设置line的其他属性
+                line.setColor(ChartUtils.COLORS[countColor++]);
+                line.setCubic(isCubic);
+                line.setHasLabels(hasLabels);
+                line.setHasLines(hasLines);
+                line.setHasPoints(hasPoints);
+                //将line放入图表的line集合中
+                lines.add(line);
+                //记本次构建绘制命中缓存
+                hasCached = true;
             }
-
-            Line line = new Line(values);
-            line.setColor(ChartUtils.COLORS[i]);
-            line.setCubic(isCubic);
-            line.setHasLabels(hasLabels);
-            line.setHasLines(hasLines);
-            line.setHasPoints(hasPoints);
-            lines.add(line);
         }
+
+        //当绘制指令未命中缓存时，返回null
+        if(!hasCached)
+            return null;
 
         LineChartData lineChartData = new LineChartData(lines);
 
         return lineChartData;
-
     }
 
-    private LineChartData generateLineData(int tagOfLine) {
-
-        if(tagOfLine > numberOfLines || tagOfLine < 0){
-            Toast.makeText(getActivity(), "wrong line ",Toast.LENGTH_SHORT).show();
-            return null;
-        }else{
-            List<Line> lines = new ArrayList<Line>();
-            List<PointValue> values = new ArrayList<PointValue>();
-
-            for (int j = 0; j < numberOfPoints; ++j) {
-                values.add(new PointValue(j, randomNumbersTab[tagOfLine][j]).setLabel("" + (int)randomNumbersTab[tagOfLine][j]));
-            }
-
-            Line line = new Line(values);
-            line.setColor(ChartUtils.COLORS[tagOfLine]);
-            line.setCubic(isCubic);
-            line.setHasLabels(hasLabels);
-            line.setHasLines(hasLines);
-            line.setHasPoints(hasPoints);
-            lines.add(line);
-
-            LineChartData lineChartData = new LineChartData(lines);
-
-            return lineChartData;
-        }
-    }
-
-    private ColumnChartData generateColumnData() {
+    private ColumnChartData generateColumnData(String tagOfTime,String tagOfType) {
         int numSubColumns = 1;
         int numColumns = 12;
         // Column can have many subColumns, here by default I use 1 subColumn in each of 8 columns.
@@ -440,20 +495,7 @@ public class HistoryFragment extends Fragment {
         return columnChartData;
     }
 
-    private void addLineToData() {
-        if (data.getLineChartData().getLines().size() >= maxNumberOfLines) {
-            Toast.makeText(getActivity(), "Samples app uses max 4 lines!", Toast.LENGTH_SHORT).show();
-            return;
-        } else {
-            ++numberOfLines;
-        }
-
-        generateData();
-    }
-
-
-    private void prepareDataAnimation() {
-
+    private void prepareDataAnimation(String tagOfTime,String tagOfType) {
         // Line animations
         for (Line line : data.getLineChartData().getLines()) {
             for (PointValue value : line.getValues()) {
@@ -492,6 +534,89 @@ public class HistoryFragment extends Fragment {
 
     }
 
+    private class PropOfTimeBlock{
+        public long startTime = 0L;
+        public Calendar calendar;
+        public int numBlock,numChartColor;
+        public String typeTimeBlock,tableName;
+
+        public PropOfTimeBlock(){
+            startTime = new Date().getTime();
+            calendar = Calendar.getInstance();
+            numBlock = 0;
+            numChartColor = 0;
+            typeTimeBlock = null;
+            tableName = null;
+        }
+
+        @Override
+        public String toString(){
+            return "StartTime:" + startTime + ",NumBlock:" + numBlock + ",NumChartColor:" + numChartColor + ",TypeTimeBlock:" + typeTimeBlock +  ",TableName:" +tableName;
+        }
+    }
+
+    private PropOfTimeBlock getPropOfBlockData(String tagOfTime,String tagOfType){
+        PropOfTimeBlock poTimeBlock = new PropOfTimeBlock();
+
+        switch (tagOfTime){
+            case CHART_TIME_YEAR:
+                //设置为十二个月前的第一天
+                poTimeBlock.calendar.add(Calendar.YEAR,-1);
+                poTimeBlock.calendar.set(Calendar.DAY_OF_MONTH, 1);
+                poTimeBlock.numBlock = TimeHelper.POINT_PER_LINE_OF_YEAR;
+                poTimeBlock.typeTimeBlock = HistoryDBHelper.TYPE_BLOCK_MONTH;
+                break;
+            case CHART_TIME_QUARTER:
+                //设置为三个月前的第一天所在星期的第一天
+                poTimeBlock.calendar.add(Calendar.MONTH,-3);
+                poTimeBlock.calendar.set(Calendar.DAY_OF_MONTH, 1);
+                poTimeBlock.calendar.add(Calendar.DAY_OF_WEEK, 1);
+                poTimeBlock.numBlock = TimeHelper.POINT_PER_LINE_OF_QUARTER;
+                poTimeBlock.typeTimeBlock = HistoryDBHelper.TYPE_BLOCK_WEEK;
+                break;
+            case CHART_TIME_MONTH:
+                //设置为当月第一天
+                poTimeBlock.calendar.set(Calendar.DAY_OF_MONTH, 1);
+                poTimeBlock.numBlock = TimeHelper.POINT_PER_LINE_OF_MONTH;
+                poTimeBlock.typeTimeBlock = HistoryDBHelper.TYPE_BLOCK_DAY;
+                break;
+            case CHART_TIME_WEEK:
+                //设置为当前星期的第一天
+                poTimeBlock.calendar.set(Calendar.DAY_OF_WEEK, 1);
+                poTimeBlock.numBlock = TimeHelper.POINT_PER_LINE_OF_WEEK;
+                poTimeBlock.typeTimeBlock = HistoryDBHelper.TYPE_BLOCK_DAY;
+                break;
+            case CHART_TIME_DAY:
+                poTimeBlock.numBlock = TimeHelper.POINT_PER_LINE_OF_DAY;
+                poTimeBlock.typeTimeBlock = HistoryDBHelper.TYPE_BLOCK_HOUR;
+                break;
+        }
+
+        //设置为00:00:00时刻
+        poTimeBlock.calendar.set(Calendar.HOUR_OF_DAY, 0);
+        poTimeBlock.calendar.set(Calendar.MINUTE, 0);
+        poTimeBlock.calendar.set(Calendar.SECOND, 0);
+        poTimeBlock.calendar.set(Calendar.MILLISECOND, 0);
+
+        poTimeBlock.startTime = poTimeBlock.calendar.getTime().getTime();
+
+        switch (tagOfType){
+            case CHART_TYPE_HEART:
+                poTimeBlock.tableName = HistoryDBHelper.HEART_TABLE_NAME;
+                poTimeBlock.numChartColor = CHART_COLOR_HEART;
+                break;
+            case CHART_TYPE_STEP:
+                poTimeBlock.tableName = HistoryDBHelper.STEP_TABLE_NAME;
+                poTimeBlock.numChartColor = CHART_COLOR_STEP;
+                break;
+            case CHART_TYPE_WEIGHT:
+                poTimeBlock.tableName = HistoryDBHelper.WEIGHT_TABLE_NAME;
+                poTimeBlock.numChartColor = CHART_COLOR_WEIGHT;
+                break;
+        }
+        return poTimeBlock;
+    }
+
 
     //----------------------------------------------------------------------------------------------
 
@@ -506,11 +631,8 @@ public class HistoryFragment extends Fragment {
      * 回调：从数据库中获取相应数据
      */
     public interface OnSelectDataBaseCallBack {
-        HashMap<String,ArrayList<Float>> onSelectHeartData(long startTime, long endTime, int blockNum);
-        HashMap<String,ArrayList<Float>> onSelectStepData(long startTime, long endTime, int blockNum);
-        HashMap<String,ArrayList<Float>> onSelectWeightData(long startTime, long endTime, int blockNum);
+        HashMap<String,ArrayList<Float>> onSelectData(long startTime, int numBlock, String typeTimeBlock, String tableName);
         void onSQLTest();
-
     }
 
 }
