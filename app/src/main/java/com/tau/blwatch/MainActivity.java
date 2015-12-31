@@ -259,71 +259,50 @@ public class MainActivity extends AppCompatActivity
     /**
      * 回调实现：从数据库获取心跳数据
      * @param startTime 起始时间
-     * @param endTime   结束时间
-     * @param blockNum 时间的段数
+     * @param numBlock 时间的段数
      * @return
      */
-    public HashMap<String,ArrayList<Float>> onSelectHeartData(long startTime, long endTime, int blockNum){
+    public HashMap<String,ArrayList<Float>> onSelectData(long startTime, int numBlock, String typeTimeBlock, String tableName){
         Log.d("onSelectHeartData", "start");
 
         HashMap<String,ArrayList<Float>> pointCollection = new HashMap<>();
-        long blockTime = (endTime - startTime) / blockNum;
-        long blockStartTime = startTime;
-        long blockEndTime = blockStartTime + blockTime;
-        Log.d("onSelectHeartData","blockStartTime=" + blockStartTime);
-        Log.d("onSelectHeartData", "blockEndTime=" + blockEndTime);
+        long endTime = startTime;
+        switch (typeTimeBlock){
+            case HistoryDBHelper.TYPE_BLOCK_HOUR:
+                endTime += TimeHelper.MI_SECOND_HOUR * numBlock;
+                break;
+            case HistoryDBHelper.TYPE_BLOCK_DAY:
+                endTime += TimeHelper.MI_SECOND_DAY * numBlock;
+                break;
+            case HistoryDBHelper.TYPE_BLOCK_WEEK:
+                endTime += TimeHelper.MI_SECOND_WEEK * numBlock;
+                break;
+            case HistoryDBHelper.TYPE_BLOCK_MONTH:
+                endTime += TimeHelper.MI_SECOND_MONTH * numBlock;
+                break;
+        }
 
-        for(int i = 0;i < blockNum;i++){
-            Cursor pointCursor = mHistoryDBHelper.selectHeart(blockStartTime,blockEndTime);
-            Log.d("onSelectHeartData", "pointCursor.getCount()=" + pointCursor.getCount());
-            pointCursor.moveToFirst();
-
-            for(int j = 0;j < pointCursor.getColumnCount();j++){
-                Log.d("onSelectHeartData","j="+j);
-                String columnName = pointCursor.getColumnName(j);
-                Log.d("onSelectHeartData","columnName="+columnName);
+        Cursor pointCursor = mHistoryDBHelper.selectData(startTime,endTime,typeTimeBlock,tableName);
+        Log.d("DBHelper.selectData",startTime + "," + endTime + "," + typeTimeBlock + "," + tableName);
+        pointCursor.moveToFirst();
+        Log.d("pointCursor", "getCount()=" + pointCursor.getCount());
+        Log.d("pointCursor", "getColumnCount()=" + pointCursor.getColumnCount());
+        while(pointCursor.moveToNext()){//遍历每一行
+            for(int j = 0;j < pointCursor.getColumnCount();j++){//遍历每一列
+                String columnName = "StartTime:" + startTime + "-" + numBlock + " * " + typeTimeBlock + "From = " + tableName + "Value = " + pointCursor.getColumnName(j);
                 ArrayList<Float> tempList = pointCollection.get(columnName);
                 if(tempList == null)
                     tempList = new ArrayList<>();
 
-                Log.d("onSelectHeartData", "tempListBeforeAdd=" + tempList.toString());
                 if(pointCursor.getCount() != 0){
                     tempList.add(pointCursor.getFloat(j));
-                    Log.d("onSelectHeartData", "getFloat=" + pointCursor.getFloat(j));
                 }else
                     tempList.add(0F);
-                Log.d("onSelectHeartData","tempListAfterAdd="+tempList.toString());
 
                 pointCollection.put(columnName,tempList);
             }
-            blockEndTime += blockTime;
-            startTime += startTime;
-
-            if(blockEndTime > endTime)
-                blockEndTime = endTime;
         }
-        Log.d("onSelectHeartData", "end");
         return pointCollection;
-    }
-
-    /**
-     * 回调实现:从数据库获取步数数据
-     * @param startTime 起始时间
-     * @param endTime   结束时间
-     */
-    public HashMap<String,ArrayList<Float>> onSelectStepData(long startTime, long endTime, int blockSize){
-        HashMap<String,ArrayList<Float>> nil = null;
-        return nil;
-    }
-
-    /**
-     * 回调实现:从数据库获取体重数据
-     * @param startTime 起始时间
-     * @param endTime   结束时间
-     */
-    public HashMap<String,ArrayList<Float>> onSelectWeightData(long startTime, long endTime, int blockSize){
-        HashMap<String,ArrayList<Float>> nil = null;
-        return nil;
     }
 
     /**
