@@ -19,25 +19,26 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
 
     private final static String DATABASE_NAME = "HistoryData.db";
     private final static int DATABASE_VERSION = 1;
-    private final static String HEART_TABLE_NAME = "heart_table";
-    private final static String STEP_TABLE_NAME = "step_table";
-    private final static String WEIGHT_TABLE_NAME = "weight_table";
+    public final static String HEART_TABLE_NAME = "heart_table";
+    public final static String STEP_TABLE_NAME = "step_table";
+    public final static String WEIGHT_TABLE_NAME = "weight_table";
 
-    public final static String INFO_ID = "id";
-    public final static String INFO_TIME = "time";
-    public final static String INFO_DEVICE_ADD = "device_add";
-    public final static String AVG_HEART = "avg_heart";
-    public final static String MAX_HEART = "max_heart";
-    public final static String MIN_HEART = "min_heart";
-    public final static String VALUE_STEP = "value_step";
-    public final static String VALUE_WEIGHT = "value_weight";
-    public final static String CASE_TIME_BLOCK = "time_block";
+    private final static String INFO_ID = "id";
+    private final static String INFO_TIME = "time";
+    private final static String INFO_DEVICE_ADD = "device_add";
+    private final static String AVG_HEART = "avg_heart";
+    private final static String MAX_HEART = "max_heart";
+    private final static String MIN_HEART = "min_heart";
+    private final static String VALUE_STEP = "value_step";
+    private final static String VALUE_WEIGHT = "value_weight";
+    private final static String CASE_TIME_BLOCK = "time_block";
 
-    public final static int SQLITE_DATE_PER_JAVA_DATE = 1000;
+    private final static int SQLITE_DATE_PER_JAVA_DATE = 1000;
 
-    public final static int TYPE_BLOCK_MONTH = 1;
-    public final static int TYPE_BLOCK_DAY = 2;
-    public final static int TYPE_BLOCK_HOUR = 3;
+    public final static String TYPE_BLOCK_MONTH = "'%Y-%m'";    //年-月
+    public final static String TYPE_BLOCK_WEEK = "'%Y-%W'";     //年-周
+    public final static String TYPE_BLOCK_DAY = "'%m-%d'";      //月-天
+    public final static String TYPE_BLOCK_HOUR = "'%d-%H'";     //日-小时
 
     //以下为模拟注入数据时使用的量
     private long writeTime = 0L;
@@ -171,45 +172,61 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         return row;
     }
 
-    //按时间区间查询心跳
-    public Cursor selectHeart(long startTime, long endTime){
-        startTime /= SQLITE_DATE_PER_JAVA_DATE;
-        endTime /= SQLITE_DATE_PER_JAVA_DATE;
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery(
-                "SELECT " + "avg(" + AVG_HEART + ")," + "avg(" + MAX_HEART + ")," + "avg(" + MIN_HEART + ")," +
-                        "strftime('%Y-%m'," + INFO_TIME + "," + "'unixepoch') as BLOCK_TIME" +
-                        " FROM " + HEART_TABLE_NAME +
-                        " WHERE " + INFO_TIME + ">=" + startTime +
-                        " and " + INFO_TIME + "<" + endTime +
-                        " GROUP BY " + "BLOCK_TIME", null);
-        return cursor;
-    }
 
-    //按时间区间查询步数
-    public Cursor selectStep(long startTime, long endTime){
-        startTime /= SQLITE_DATE_PER_JAVA_DATE;
-        endTime /= SQLITE_DATE_PER_JAVA_DATE;
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery(
-                "SELECT * FROM " + STEP_TABLE_NAME + " WHERE " +
-                        INFO_TIME + ">=? and " + INFO_TIME + "<?",
-                new String[]{String.valueOf(startTime), String.valueOf(endTime)}
-        );
-        return cursor;
-    }
+    /**
+     * 按时间区间查询数据
+     *
+     * @param startTime 起始时间
+     * @param endTime   结束时间
+     * @param typeTimeBlock  时间片类型
+     * @param tableName 表名
+     * @return  查询结果
+     */
+    public Cursor selectData(long startTime, long endTime, String typeTimeBlock, String tableName){
+        //当typeTime为空或者不为已有日期格式输入之一时
+        if(typeTimeBlock == null
+                || !(typeTimeBlock.equals(TYPE_BLOCK_DAY)
+                    || typeTimeBlock.equals(TYPE_BLOCK_HOUR)
+                    || typeTimeBlock.equals(TYPE_BLOCK_WEEK )
+                    || typeTimeBlock.equals(TYPE_BLOCK_MONTH)))
+            return null;
+        //当tableName为空时
+        if(tableName == null)
+            return null;
 
-    //按时间区间查询体重
-    public Cursor selectWeight(long startTime, long endTime){
+        //验证参数合法后
         startTime /= SQLITE_DATE_PER_JAVA_DATE;
         endTime /= SQLITE_DATE_PER_JAVA_DATE;
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery(
-                "SELECT * FROM " + WEIGHT_TABLE_NAME + " WHERE " +
-                        INFO_TIME + ">=? and " + INFO_TIME + "<?",
-                new String[]{String.valueOf(startTime),String.valueOf(endTime)}
-        );
-        return cursor;
+        Cursor cursor = null;
+
+        switch (tableName){
+            case HEART_TABLE_NAME:  //查询心率
+                cursor = db.rawQuery(
+                        "SELECT " + "avg(" + AVG_HEART + ")," + "avg(" + MAX_HEART + ")," + "avg(" + MIN_HEART + ")" +
+                                " FROM " + HEART_TABLE_NAME +
+                                " WHERE " + INFO_TIME + ">=" + startTime +
+                                " and " + INFO_TIME + "<" + endTime +
+                                " GROUP BY " + "strftime(" + typeTimeBlock + "," + INFO_TIME + "," + "'unixepoch')", null);
+                return cursor;
+            case STEP_TABLE_NAME:   //查询步数
+                cursor = db.rawQuery(
+                        "SELECT * FROM " + STEP_TABLE_NAME + " WHERE " +
+                                INFO_TIME + ">=? and " + INFO_TIME + "<?",
+                        new String[]{String.valueOf(startTime), String.valueOf(endTime)}
+                );
+                return cursor;
+            case WEIGHT_TABLE_NAME: //查询体重
+                cursor = db.rawQuery(
+                        "SELECT * FROM " + WEIGHT_TABLE_NAME + " WHERE " +
+                                INFO_TIME + ">=? and " + INFO_TIME + "<?",
+                        new String[]{String.valueOf(startTime),String.valueOf(endTime)}
+                );
+                return cursor;
+
+        }
+        //当tableName不为已有表名之一时
+        return null;
     }
 
     /**
@@ -256,7 +273,7 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
                 Log.d("simData", "run");
                 Log.d("simData", "sSumTime" + sSumTime + (sSumTime > 0));
 
-                SimpleDateFormat mlSimpleDateFormat= new SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.US);
+                SimpleDateFormat mlSimpleDateFormat= new SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.CHINA);
                 Random mlRandom = new Random();
                 db.beginTransaction();          //手动设置开始事务
                 // Transaction活动时间内所有的操作将被包装成统一的事务进行SQL操作
@@ -333,7 +350,7 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
             @Override
             public void run() {
 //                Cursor cursor = db.rawQuery(sqlTest,null);
-                Cursor cursor = selectHeart(timeNow - sSumTime, timeNow);
+                Cursor cursor = selectData(timeNow - sSumTime, timeNow, TYPE_BLOCK_MONTH, HEART_TABLE_NAME);
                 cursor.moveToFirst();
                 while(cursor.moveToNext()){
                     Log.d("SQLTest", cursor.getString(0));
