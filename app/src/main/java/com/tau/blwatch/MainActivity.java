@@ -257,7 +257,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * 回调实现：从数据库获取心跳数据
+     * 回调实现：从数据库获取数据
      * @param startTime 起始时间
      * @param numBlock 时间的段数
      * @return
@@ -284,13 +284,20 @@ public class MainActivity extends AppCompatActivity
 
         Cursor pointCursor = mHistoryDBHelper.selectData(startTime,endTime,typeTimeBlock,tableName);
         Log.d("DBHelper.selectData",startTime + "," + endTime + "," + typeTimeBlock + "," + tableName);
-        pointCursor.moveToFirst();
+//        pointCursor.moveToFirst();
         Log.d("pointCursor", "getCount()=" + pointCursor.getCount());
         Log.d("pointCursor", "getColumnCount()=" + pointCursor.getColumnCount());
         while(pointCursor.moveToNext()){//遍历每一行
             for(int j = 0;j < pointCursor.getColumnCount();j++){//遍历每一列
-                String columnName = "StartTime:" + startTime + "-" + numBlock + " * " + typeTimeBlock + "From = " + tableName + "Value = " + pointCursor.getColumnName(j);
-                ArrayList<Float> tempList = pointCollection.get(columnName);
+                boolean isDate = false;
+                if(pointCursor.getColumnName(j).equals(HistoryDBHelper.ARG_TIME_BLOCK))
+                    isDate = true;
+                else
+                    isDate = false;
+
+                String keyName = HistoryDBHelper.createKeyName(startTime,numBlock,typeTimeBlock,tableName,isDate,pointCursor.getColumnName(j));
+
+                ArrayList<Float> tempList = pointCollection.get(keyName);
                 if(tempList == null)
                     tempList = new ArrayList<>();
 
@@ -299,7 +306,7 @@ public class MainActivity extends AppCompatActivity
                 }else
                     tempList.add(0F);
 
-                pointCollection.put(columnName,tempList);
+                pointCollection.put(keyName,tempList);
             }
         }
         return pointCollection;
