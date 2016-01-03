@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import lecho.lib.hellocharts.formatter.SimpleAxisValueFormatter;
 import lecho.lib.hellocharts.gesture.ZoomType;
 import lecho.lib.hellocharts.listener.ComboLineColumnChartOnValueSelectListener;
 import lecho.lib.hellocharts.model.Axis;
@@ -327,10 +328,12 @@ public class HistoryFragment extends Fragment {
 
         boolean hasCached = false;
         //构建本次构建图表数据时，应当记录入mStatisticsCollection的Key的关键字（即开始时间、时间片数量与时间片类型）
-        String selectDataColumnNameKey =
-                "StartTime:" + propOfTimeBlock.startTime
-                        + "-" + propOfTimeBlock.numBlock + " * " + propOfTimeBlock.typeTimeBlock
-                        + "From = " + propOfTimeBlock.tableName;
+        String selectDataColumnNameKey = HistoryDBHelper.createKeyName(
+                propOfTimeBlock.startTime,
+                propOfTimeBlock.numBlock,
+                propOfTimeBlock.typeTimeBlock,
+                propOfTimeBlock.tableName,
+                false);
 
         for (Map.Entry<String, ArrayList<Float>> entry : mStatisticsCollection.entrySet()) {
             //如果Key的关键字在mStatisticsCollection中的Key列表中已经存在，则记本次构建指令命中缓存
@@ -376,33 +379,45 @@ public class HistoryFragment extends Fragment {
 
         Axis axisX = new Axis();
         Axis axisY = new Axis().setHasLines(true);
-        data.setAxisXBottom(axisX);
-        data.setAxisYLeft(axisY);
 
-        chart.setComboLineColumnChartData(data);
-        final Viewport v = new Viewport(chart.getMaximumViewport());
+        final Viewport vMax = new Viewport(chart.getMaximumViewport());
+        final Viewport vCurrent = new Viewport(chart.getCurrentViewport());
 
         switch (tagOfType){
             case CHART_TYPE_HEART:
-                v.bottom = 0;
-                v.top = v.top * 1.1F;
-                chart.setMaximumViewport(v);
-                chart.setCurrentViewport(v);
+                vMax.bottom = 0;
+                vMax.top = vMax.top * 1.1F;
                 break;
-
             case CHART_TYPE_STEP:
-                chart.resetViewports();
                 break;
-
             case CHART_TYPE_WEIGHT:
-                v.bottom = 0;
-                v.top = 140;
-                chart.setMaximumViewport(v);
-                chart.setCurrentViewport(v);
+                vMax.bottom = 0;
+                vMax.top = 140;
                 break;
         }
 
+        switch (tagOfTime){
+            case CHART_TIME_YEAR:
+                break;
+            case CHART_TIME_QUARTER:
+                break;
+            case CHART_TIME_MONTH:
+                vCurrent.right = 15;
+                break;
+            case CHART_TIME_WEEK:
+                break;
+            case CHART_TIME_DAY:
+                break;
+        }
+
+        data.setAxisXBottom(axisX);
+        data.setAxisYLeft(axisY);
+
+        chart.setMaximumViewport(vMax);
+        chart.setCurrentViewport(vCurrent);
+
         chart.setZoomType(ZoomType.HORIZONTAL);
+        chart.setComboLineColumnChartData(data);
 //        chart.startDataAnimation();
     }
 
@@ -434,10 +449,12 @@ public class HistoryFragment extends Fragment {
         List<Line> lines = new ArrayList<Line>();
         PropOfTimeBlock propOfTimeBlock = getPropOfBlockData(tagOfTime,tagOfType);
 
-        String selectDataColumnNameKey =
-                "StartTime:" + propOfTimeBlock.startTime
-                        + "-" + propOfTimeBlock.numBlock + " * " + propOfTimeBlock.typeTimeBlock
-                        + "From = " + propOfTimeBlock.tableName;
+        String selectDataColumnNameKey = HistoryDBHelper.createKeyName(
+                propOfTimeBlock.startTime,
+                propOfTimeBlock.numBlock,
+                propOfTimeBlock.typeTimeBlock,
+                propOfTimeBlock.tableName,
+                false);
 
         boolean hasCached = false;
         int countColor = 0;
