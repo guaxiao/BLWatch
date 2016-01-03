@@ -31,7 +31,8 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     private final static String MIN_HEART = "min_heart";
     private final static String VALUE_STEP = "value_step";
     private final static String VALUE_WEIGHT = "value_weight";
-    private final static String CASE_TIME_BLOCK = "time_block";
+
+    public final static String ARG_TIME_BLOCK = "time_block";
 
     private final static int SQLITE_DATE_PER_JAVA_DATE = 1000;
 
@@ -39,6 +40,12 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     public final static String TYPE_BLOCK_WEEK = "'%Y-%W'";     //年-周
     public final static String TYPE_BLOCK_DAY = "'%m-%d'";      //月-天
     public final static String TYPE_BLOCK_HOUR = "'%d-%H'";     //日-小时
+
+    public final static String ARG_START_TIME = "StartTime:";
+    public final static String ARG_TIME_TYPE = ",TimeType:";
+    public final static String ARG_FROM = ",From:";
+    public final static String ARG_DATA_TYPE = ",DateType:";
+    public final static String ARG_VALUE = ",Value:";
 
     //以下为模拟注入数据时使用的量
     private long writeTime = 0L;
@@ -203,25 +210,30 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         switch (tableName){
             case HEART_TABLE_NAME:  //查询心率
                 cursor = db.rawQuery(
-                        "SELECT " + "avg(" + AVG_HEART + ")," + "avg(" + MAX_HEART + ")," + "avg(" + MIN_HEART + ")" +
+                        "SELECT " + "strftime(" + typeTimeBlock + "," + INFO_TIME + "," + "'unixepoch') AS " + ARG_TIME_BLOCK
+                                    + "avg(" + AVG_HEART + ")," + "avg(" + MAX_HEART + ")," + "avg(" + MIN_HEART + ")" +
                                 " FROM " + HEART_TABLE_NAME +
                                 " WHERE " + INFO_TIME + ">=" + startTime +
                                 " and " + INFO_TIME + "<" + endTime +
-                                " GROUP BY " + "strftime(" + typeTimeBlock + "," + INFO_TIME + "," + "'unixepoch')", null);
+                                " GROUP BY " + ARG_TIME_BLOCK, null);
                 return cursor;
             case STEP_TABLE_NAME:   //查询步数
                 cursor = db.rawQuery(
-                        "SELECT * FROM " + STEP_TABLE_NAME + " WHERE " +
-                                INFO_TIME + ">=? and " + INFO_TIME + "<?",
-                        new String[]{String.valueOf(startTime), String.valueOf(endTime)}
-                );
+                        "SELECT " + "strftime(" + typeTimeBlock + "," + INFO_TIME + "," + "'unixepoch') AS " + ARG_TIME_BLOCK
+                                + "sum(" + VALUE_STEP + ")" +
+                                " FROM " + STEP_TABLE_NAME +
+                                " WHERE " + INFO_TIME + ">=" + startTime +
+                                " and " + INFO_TIME + "<" + endTime +
+                                " GROUP BY " + ARG_TIME_BLOCK, null);
                 return cursor;
             case WEIGHT_TABLE_NAME: //查询体重
                 cursor = db.rawQuery(
-                        "SELECT * FROM " + WEIGHT_TABLE_NAME + " WHERE " +
-                                INFO_TIME + ">=? and " + INFO_TIME + "<?",
-                        new String[]{String.valueOf(startTime),String.valueOf(endTime)}
-                );
+                        "SELECT " + "strftime(" + typeTimeBlock + "," + INFO_TIME + "," + "'unixepoch') AS " + ARG_TIME_BLOCK
+                                + "avg(" + VALUE_WEIGHT + ")" +
+                                " FROM " + WEIGHT_TABLE_NAME +
+                                " WHERE " + INFO_TIME + ">=" + startTime +
+                                " and " + INFO_TIME + "<" + endTime +
+                                " GROUP BY " + ARG_TIME_BLOCK, null);
                 return cursor;
 
         }
@@ -258,8 +270,22 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         resetTable(WEIGHT_TABLE_NAME);
     }
 
+    public static String createKeyName(long startTime, int numBlock, String typeTimeBlock, String tableName, boolean isDate, String columnName){
+        String keyName = ARG_START_TIME + startTime + ARG_TIME_TYPE + numBlock + " * " + typeTimeBlock + ARG_FROM + tableName;
+        if(isDate)
+            keyName += ARG_DATA_TYPE + columnName;
+        else
+            keyName += ARG_VALUE + columnName;
+        return keyName;
+    }
+
+    public static String createKeyName(long startTime, int numBlock, String typeTimeBlock, String tableName, boolean isDate){
+        String keyName = createKeyName(startTime, numBlock, typeTimeBlock, tableName, isDate, "");
+        return keyName;
+    }
+
     /**
-     *  模拟为期一年的全部数据注入
+     *  模拟为期一年半的全部数据注入
      */
 //    public void simulateData(long sunTime, long intervalsTime, String tableName){
     public void simulateData(){
