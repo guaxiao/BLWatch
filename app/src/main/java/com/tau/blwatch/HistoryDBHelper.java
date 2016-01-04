@@ -44,7 +44,7 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     public final static String ARG_START_TIME = "StartTime:";
     public final static String ARG_TIME_TYPE = ",TimeType:";
     public final static String ARG_FROM = ",From:";
-    public final static String ARG_DATA_TYPE = ",DateType:";
+    public final static String ARG_DATA = ",Date:";
     public final static String ARG_VALUE = ",Value:";
 
     //以下为模拟注入数据时使用的量
@@ -54,6 +54,10 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     public final static long sHeartAndStepIntervals = 5 * 60 * 1000;   //心跳数据库计入间隔5分钟
     public final static long sWeightIntervals = 8 * 60 * 60 * 1000; //体重数据库计入间隔8小时
     public final static long sSumTime = (long)365 * 24 * 3600 * 1000; //模拟注入时间跨度一年
+    public final static long sObligateTime = (long)180 * 24 * 3600 * 1000; //模拟预留注入时间180天
+
+//    public final static long sSumTime = (long)12 * 3600 * 1000; //模拟注入时间跨度12h
+//    public final static long sObligateTime = (long)0 * 24 * 3600 * 1000; //模拟预留注入时间0
 
     private int sStepBench = 0;//步数基准值
 
@@ -193,9 +197,9 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         //当typeTime为空或者不为已有日期格式输入之一时
         if(typeTimeBlock == null
                 || !(typeTimeBlock.equals(TYPE_BLOCK_DAY)
-                    || typeTimeBlock.equals(TYPE_BLOCK_HOUR)
-                    || typeTimeBlock.equals(TYPE_BLOCK_WEEK )
-                    || typeTimeBlock.equals(TYPE_BLOCK_MONTH)))
+                || typeTimeBlock.equals(TYPE_BLOCK_HOUR)
+                || typeTimeBlock.equals(TYPE_BLOCK_WEEK )
+                || typeTimeBlock.equals(TYPE_BLOCK_MONTH)))
             return null;
         //当tableName为空时
         if(tableName == null)
@@ -210,8 +214,8 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         switch (tableName){
             case HEART_TABLE_NAME:  //查询心率
                 cursor = db.rawQuery(
-                        "SELECT " + "strftime(" + typeTimeBlock + "," + INFO_TIME + "," + "'unixepoch') AS " + ARG_TIME_BLOCK
-                                    + "avg(" + AVG_HEART + ")," + "avg(" + MAX_HEART + ")," + "avg(" + MIN_HEART + ")" +
+                        "SELECT " + "strftime(" + typeTimeBlock + "," + INFO_TIME + "," + "'unixepoch','localtime') AS " + ARG_TIME_BLOCK + ","
+                                + "avg(" + AVG_HEART + ")," + "avg(" + MAX_HEART + ")," + "avg(" + MIN_HEART + ")" +
                                 " FROM " + HEART_TABLE_NAME +
                                 " WHERE " + INFO_TIME + ">=" + startTime +
                                 " and " + INFO_TIME + "<" + endTime +
@@ -219,16 +223,15 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
                 return cursor;
             case STEP_TABLE_NAME:   //查询步数
                 cursor = db.rawQuery(
-                        "SELECT " + "strftime(" + typeTimeBlock + "," + INFO_TIME + "," + "'unixepoch') AS " + ARG_TIME_BLOCK
-                                + "sum(" + VALUE_STEP + ")" +
+                        "SELECT " + "strftime(" + typeTimeBlock + "," + INFO_TIME + "," + "'unixepoch','localtime') AS " + ARG_TIME_BLOCK + ","
+                                + VALUE_STEP + "," + INFO_TIME +
                                 " FROM " + STEP_TABLE_NAME +
                                 " WHERE " + INFO_TIME + ">=" + startTime +
-                                " and " + INFO_TIME + "<" + endTime +
-                                " GROUP BY " + ARG_TIME_BLOCK, null);
+                                " and " + INFO_TIME + "<" + endTime, null);
                 return cursor;
             case WEIGHT_TABLE_NAME: //查询体重
                 cursor = db.rawQuery(
-                        "SELECT " + "strftime(" + typeTimeBlock + "," + INFO_TIME + "," + "'unixepoch') AS " + ARG_TIME_BLOCK
+                        "SELECT " + "strftime(" + typeTimeBlock + "," + INFO_TIME + "," + "'unixepoch','localtime') AS " + ARG_TIME_BLOCK + ","
                                 + "avg(" + VALUE_WEIGHT + ")" +
                                 " FROM " + WEIGHT_TABLE_NAME +
                                 " WHERE " + INFO_TIME + ">=" + startTime +
@@ -273,7 +276,7 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     public static String createKeyName(long startTime, int numBlock, String typeTimeBlock, String tableName, boolean isDate, String columnName){
         String keyName = ARG_START_TIME + startTime + ARG_TIME_TYPE + numBlock + " * " + typeTimeBlock + ARG_FROM + tableName;
         if(isDate)
-            keyName += ARG_DATA_TYPE + columnName;
+            keyName += ARG_DATA + columnName;
         else
             keyName += ARG_VALUE + columnName;
         return keyName;
@@ -305,7 +308,7 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
                 // Transaction活动时间内所有的操作将被包装成统一的事务进行SQL操作
 
                 //模拟注入心跳与步数
-                for(long i = sSumTime;i > 0;i -= sHeartAndStepIntervals + sTimeShake){
+                for(long i = sSumTime;i > - sObligateTime;i -= sHeartAndStepIntervals + sTimeShake){
                     sTimeShake = (long)(Math.random() * 100);
 
                     //注入时间模拟
@@ -333,7 +336,7 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
                     }
                 }
 
-                for(long i = sSumTime;i > 0;i -= sWeightIntervals + sTimeShake){
+                for(long i = sSumTime + sObligateTime;i > - sObligateTime;i -= sWeightIntervals + sTimeShake){
                     sTimeShake = (long)(Math.random() * 100);
 
                     //注入时间模拟
