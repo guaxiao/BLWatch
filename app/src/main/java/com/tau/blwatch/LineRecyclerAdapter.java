@@ -1,6 +1,7 @@
 package com.tau.blwatch;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,7 +13,7 @@ import android.widget.TextView;
  */
 public class LineRecyclerAdapter extends RecyclerView.Adapter<LineRecyclerAdapter.MyViewHolder> {
 
-    private int mItemResource,mViewResource;
+    private static int mItemResource,mViewResource;
     private Context mContext;
     private String[] mDataList;
 
@@ -34,7 +35,7 @@ public class LineRecyclerAdapter extends RecyclerView.Adapter<LineRecyclerAdapte
 
     @Override
     public void onBindViewHolder(final MyViewHolder holder, int position) {
-        holder.tv.setText(mDataList[position]);
+        holder.mTextView.setText(mDataList[position]);
 
         // 如果设置了回调，则设置点击事件
         if (mOnItemClickListener != null){
@@ -53,13 +54,13 @@ public class LineRecyclerAdapter extends RecyclerView.Adapter<LineRecyclerAdapte
         return mDataList.length;
     }
 
-    class MyViewHolder extends RecyclerView.ViewHolder {
+    public final static class MyViewHolder extends RecyclerView.ViewHolder {
 
-        TextView tv;
+        public TextView mTextView;
 
         public MyViewHolder(View view) {
             super(view);
-            tv = (TextView) view.findViewById(mItemResource);
+            mTextView = (TextView) view.findViewById(mItemResource);
         }
     }
 
