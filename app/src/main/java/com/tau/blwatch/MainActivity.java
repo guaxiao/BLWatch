@@ -24,6 +24,7 @@ import android.widget.Toast;
 import com.ns.nsbletizhilib.TiZhiGattAttributesHelper;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -266,47 +267,182 @@ public class MainActivity extends AppCompatActivity
         Log.d("onSelectHeartData", "start");
 
         HashMap<String,ArrayList<Float>> pointCollection = new HashMap<>();
-        long endTime = startTime;
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(new Date(startTime));
+
         switch (typeTimeBlock){
             case HistoryDBHelper.TYPE_BLOCK_HOUR:
-                endTime += TimeHelper.MI_SECOND_HOUR * numBlock;
+                calendar.add(Calendar.HOUR,numBlock);
                 break;
             case HistoryDBHelper.TYPE_BLOCK_DAY:
-                endTime += TimeHelper.MI_SECOND_DAY * numBlock;
+                calendar.add(Calendar.DATE,numBlock);
                 break;
             case HistoryDBHelper.TYPE_BLOCK_WEEK:
-                endTime += TimeHelper.MI_SECOND_WEEK * numBlock;
+                calendar.add(Calendar.DATE,7 * numBlock);
                 break;
             case HistoryDBHelper.TYPE_BLOCK_MONTH:
-                endTime += TimeHelper.MI_SECOND_MONTH * numBlock;
+                calendar.add(Calendar.MONTH, numBlock);
                 break;
         }
+        long endTime = calendar.getTimeInMillis();
 
         Cursor pointCursor = mHistoryDBHelper.selectData(startTime,endTime,typeTimeBlock,tableName);
+        if(pointCursor.getCount() == 0) //若查询不到任何数据，则直接返回
+            return pointCollection;
         Log.d("DBHelper.selectData",startTime + "," + endTime + "," + typeTimeBlock + "," + tableName);
 //        pointCursor.moveToFirst();
         Log.d("pointCursor", "getCount()=" + pointCursor.getCount());
         Log.d("pointCursor", "getColumnCount()=" + pointCursor.getColumnCount());
-        while(pointCursor.moveToNext()){//遍历每一行
-            for(int j = 0;j < pointCursor.getColumnCount();j++){//遍历每一列
-                boolean isDate = false;
-                if(pointCursor.getColumnName(j).equals(HistoryDBHelper.ARG_TIME_BLOCK))
-                    isDate = true;
-                else
-                    isDate = false;
 
-                String keyName = HistoryDBHelper.createKeyName(startTime,numBlock,typeTimeBlock,tableName,isDate,pointCursor.getColumnName(j));
+        if(tableName.equals(HistoryDBHelper.STEP_TABLE_NAME)){
+            pointCursor.moveToFirst();
+            String dateBlock = pointCursor.getString(0);
+            int stepSumOfBlock = 0;
+            int stepMaxi = pointCursor.getInt(1);
+            int lastBlockEndAt = stepMaxi;
+            boolean hasRestartFromZeroInBlock = false;
+            int countLastWeek = 1;
+//            boolean hasCurrentToNextBlock = false;
+            while (pointCursor.moveToNext()){
+//                Log.d("pointCursor",pointCursor.getColumnCount() + "");
+//                if(!hasCurrentToNextBlock){
+                if(countLastWeek == 13){
+                    Date date = new Date(pointCursor.getInt(2) * 1000L);
+                    Log.d("pointCursor",date.toString());
+                }
 
-                ArrayList<Float> tempList = pointCollection.get(keyName);
-                if(tempList == null)
-                    tempList = new ArrayList<>();
+                String dateTemp = pointCursor.getString(0);
+                int stepTemp = pointCursor.getInt(1);
+                if(!dateBlock.equals(dateTemp)){    //抵达下一时间片
+//                    hasCurrentToNextBlock = true;
+                    countLastWeek ++;
+                    if(!hasRestartFromZeroInBlock){ //若本次递增函数为时间片内的第一个递增函数
+                        stepSumOfBlock += stepMaxi - lastBlockEndAt;    //则将此极大值与上一时间片的结束值之差加入小计
+                    }else{  //若不是第一个递增函数
+                        stepSumOfBlock += stepMaxi; //则直接将此极大值加入小计
+                    }
 
-                if(pointCursor.getCount() != 0){
-                    tempList.add(pointCursor.getFloat(j));
-                }else
-                    tempList.add(0F);
+                    //存储上一时间片与其步数小计
+                    String keyNameDate = HistoryDBHelper.createKeyName(startTime,numBlock,typeTimeBlock,tableName,true,pointCursor.getColumnName(0));
+                    String keyNameValue = HistoryDBHelper.createKeyName(startTime,numBlock,typeTimeBlock,tableName,false,pointCursor.getColumnName(1));
 
-                pointCollection.put(keyName,tempList);
+                    ArrayList<Float> tempListDate = pointCollection.get(keyNameDate);
+                    ArrayList<Float> tempListValue = pointCollection.get(keyNameValue);
+                    if(tempListDate == null)
+                        tempListDate = new ArrayList<>();
+                    if(tempListValue == null)
+                        tempListValue = new ArrayList<>();
+
+                    int listLenth = tempListValue.size();
+                    Log.d("pointCursor",typeTimeBlock.equals(HistoryDBHelper.TYPE_BLOCK_WEEK) + "");
+                    Log.d("pointCursor",dateBlock.endsWith("-00") + "");
+                    Log.d("pointCursor", (listLenth != 0) + "");
+                    //若在年-星期时间片下，此星期跨过了两个年份时
+                    if(typeTimeBlock.equals(HistoryDBHelper.TYPE_BLOCK_WEEK) && dateBlock.endsWith("-00")
+                            && listLenth != 0){
+                        //将在第二年中的后半星期的值加到前半星期
+                        float fLastValue = tempListValue.get(listLenth - 1);
+                        Log.d("pointCursor","endsWith(\"-00\")" + fLastValue);
+                        fLastValue += stepSumOfBlock;
+                        tempListValue.set(listLenth - 1,fLastValue);
+                        Log.d("pointCursor", dateBlock + " " + fLastValue);
+                    }else{
+                        tempListValue.add((float) stepSumOfBlock);
+
+//                        pointCollection.put(keyNameDate,tempListDate);
+                        pointCollection.put(keyNameValue, tempListValue);
+                        Log.d("pointCursor", dateBlock + " " + stepSumOfBlock);
+                    }
+
+                    //置极大值为当前值，开始下一个递增函数极大值的寻找
+                    stepMaxi = stepTemp;
+                    //记录本时间片结束时的步数数据
+                    lastBlockEndAt = stepTemp;
+                    //初始化下一时间片内第一次递增函数结束状态为未结束
+                    hasRestartFromZeroInBlock = false;
+                    //重置时间片内步数小计
+                    stepSumOfBlock = 0;
+                    //置时间片的值为当前时间片
+                    dateBlock = dateTemp;
+                }else{  //未抵达下一时间片
+                    if(stepTemp < stepMaxi){    //当前值小于上一次的值，则上一次的值为极大值
+                        if(!hasRestartFromZeroInBlock){ //若本次递增函数为时间片内的第一个递增函数
+                            stepSumOfBlock += stepMaxi - lastBlockEndAt;    //则将此极大值与上一时间片的结束值之差加入小计
+                        }else{  //若不是第一个递增函数
+                            stepSumOfBlock += stepMaxi; //则直接将此极大值加入小计
+                        }
+                        //置极大值为当前值，开始下一个递增函数的极大值寻找
+                        stepMaxi = stepTemp;
+                        //置时间片内第一次递增函数结束状态为已结束
+                        hasRestartFromZeroInBlock = true;
+                    }else{
+                        stepMaxi = stepTemp;
+                    }
+                }
+            }
+
+            if(!hasRestartFromZeroInBlock){ //若本次递增函数为时间片内的第一个递增函数
+                stepSumOfBlock += stepMaxi - lastBlockEndAt;    //则将此极大值与上一时间片的结束值之差加入小计
+            }else{  //若不是第一个递增函数
+                stepSumOfBlock += stepMaxi; //则直接将此极大值加入小计
+            }
+
+            //存储上一时间片与其步数小计
+            String keyNameDate = HistoryDBHelper.createKeyName(startTime,numBlock,typeTimeBlock,tableName,true,pointCursor.getColumnName(0));
+            String keyNameValue = HistoryDBHelper.createKeyName(startTime,numBlock,typeTimeBlock,tableName,false,pointCursor.getColumnName(1));
+
+            ArrayList<Float> tempListDate = pointCollection.get(keyNameDate);
+            ArrayList<Float> tempListValue = pointCollection.get(keyNameValue);
+            if(tempListDate == null)
+                tempListDate = new ArrayList<>();
+            if(tempListValue == null)
+                tempListValue = new ArrayList<>();
+
+            int listLenth = tempListValue.size();
+            Log.d("pointCursor", typeTimeBlock.equals(HistoryDBHelper.TYPE_BLOCK_WEEK) + "");
+            Log.d("pointCursor", dateBlock.endsWith("-00") + "");
+            Log.d("pointCursor", (listLenth != 0) + "");
+            //若在年-星期时间片下，此星期跨过了两个年份时
+            if(typeTimeBlock.equals(HistoryDBHelper.TYPE_BLOCK_WEEK) && dateBlock.endsWith("-00")
+                    && listLenth != 0){
+                //将在第二年中的后半星期的值加到前半星期
+                float fLastValue = tempListValue.get(listLenth - 1);
+                Log.d("pointCursor","endsWith(\"-00\")" + fLastValue);
+                fLastValue += stepSumOfBlock;
+                tempListValue.set(listLenth - 1,fLastValue);
+                Log.d("pointCursor", dateBlock + " " + fLastValue);
+            }else{
+                tempListValue.add((float) stepSumOfBlock);
+
+//                        pointCollection.put(keyNameDate,tempListDate);
+                pointCollection.put(keyNameValue, tempListValue);
+                Log.d("pointCursor", dateBlock + " " + stepSumOfBlock);
+            }
+
+        }else{
+            while(pointCursor.moveToNext()){//遍历每一行
+                for(int j = 0;j < pointCursor.getColumnCount();j++){//遍历每一列
+                    boolean isDate = false;
+                    if(pointCursor.getColumnName(j).equals(HistoryDBHelper.ARG_TIME_BLOCK))
+                        isDate = true;
+                    else
+                        isDate = false;
+
+                    String keyName = HistoryDBHelper.createKeyName(startTime, numBlock, typeTimeBlock, tableName, isDate, pointCursor.getColumnName(j));
+                    if(isDate)
+                        Log.d("pointCursor",pointCursor.getString(0) + " " + pointCursor.getString(1));
+
+                    ArrayList<Float> tempList = pointCollection.get(keyName);
+                    if(tempList == null)
+                        tempList = new ArrayList<>();
+
+                    if(pointCursor.getCount() != 0){
+                        tempList.add(pointCursor.getFloat(j));
+                    }else
+                        tempList.add(0F);
+
+                    pointCollection.put(keyName,tempList);
+                }
             }
         }
         return pointCollection;
