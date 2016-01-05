@@ -27,4 +27,5 @@ dependencies {
     compile 'com.android.support:design:23.1.1'
     compile files('libs/hellocharts-library-1.5.8.jar')
     compile files('libs/ns_tizhi_helper.jar')
+    compile 'com.github.d-max:spots-dialog:0.4@aar'
 }
