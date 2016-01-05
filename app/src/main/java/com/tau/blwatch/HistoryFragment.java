@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -114,6 +115,7 @@ public class HistoryFragment extends Fragment {
     private String mTagOfChartType = null;
 
 
+
     /**
      * Use this factory method to create a new instance of
      * this fragment using the provided parameters.
@@ -200,7 +202,7 @@ public class HistoryFragment extends Fragment {
         //构建时间选择控件
         mTimeRecyclerView = (RecyclerView) fragmentView.findViewById(R.id.id_recycler_view_of_time);
         mTimeRecyclerView.setLayoutManager(
-                new LinearLayoutManager(getActivity(), LinearLayout.HORIZONTAL, true));
+                new LinearLayoutManager(getActivity(), LinearLayout.HORIZONTAL, false));
         mTimeRecyclerAdapter = new LineRecyclerAdapter(
                 getActivity(),
                 mTimeDataList,
@@ -209,47 +211,53 @@ public class HistoryFragment extends Fragment {
         mTimeRecyclerAdapter.setOnItemClickListener(new LineRecyclerAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(View view, int position) {
-                Toast.makeText(getActivity(), position + " click",
-                        Toast.LENGTH_SHORT).show();
                 switch (position) {
                     case 0:
                         mTagOfChartTime = CHART_TIME_DAY;
                         generateValues(mTagOfChartTime, mTagOfChartType);
                         generateChart(mTagOfChartTime, mTagOfChartType);
+                        mTimeRecyclerAdapter.setSelectItem(0);
                         break;
                     case 1:
                         mTagOfChartTime = CHART_TIME_WEEK;
                         generateValues(mTagOfChartTime, mTagOfChartType);
                         generateChart(mTagOfChartTime, mTagOfChartType);
+                        mTimeRecyclerAdapter.setSelectItem(1);
                         break;
                     case 2:
                         mTagOfChartTime = CHART_TIME_MONTH;
                         generateValues(mTagOfChartTime, mTagOfChartType);
                         generateChart(mTagOfChartTime, mTagOfChartType);
+                        mTimeRecyclerAdapter.setSelectItem(2);
                         break;
                     case 3:
                         mTagOfChartTime = CHART_TIME_QUARTER;
                         generateValues(mTagOfChartTime, mTagOfChartType);
                         generateChart(mTagOfChartTime, mTagOfChartType);
+                        mTimeRecyclerAdapter.setSelectItem(3);
                         break;
                     case 4:
                         mTagOfChartTime = CHART_TIME_YEAR;
                         generateValues(mTagOfChartTime, mTagOfChartType);
                         generateChart(mTagOfChartTime, mTagOfChartType);
+                        mTimeRecyclerAdapter.setSelectItem(4);
                         break;
                     case 5:
 //                        mTagOfChartTime = CHART_TIME_SUM;
 //                        generateData(mTagOfChartTime,mTagOfChartType);
+//                        mTimeRecyclerAdapter.setSelectItem(5);
+                        Toast.makeText(getActivity(), "Developing",Toast.LENGTH_SHORT).show();
                         break;
                 }
             }
         });
         mTimeRecyclerView.setAdapter(mTimeRecyclerAdapter);
+        mTimeRecyclerView.setHasFixedSize(true);
 
         //构建类型选择控件
         mTypeRecyclerView = (RecyclerView) fragmentView.findViewById(R.id.id_recycler_view_of_type);
         mTypeRecyclerView.setLayoutManager(
-                new LinearLayoutManager(getActivity(), LinearLayout.HORIZONTAL,true));
+                new LinearLayoutManager(getActivity(), LinearLayout.HORIZONTAL,false));
         mTypeRecyclerAdapter = new LineRecyclerAdapter(
                 getActivity(),
                 mTypeDataList,
@@ -265,26 +273,31 @@ public class HistoryFragment extends Fragment {
                         mTagOfChartType = CHART_TYPE_STEP;
                         generateValues(mTagOfChartTime,mTagOfChartType);
                         generateChart(mTagOfChartTime, mTagOfChartType);
+                        mTypeRecyclerAdapter.setSelectItem(0);
                         break;
                     case 1:
                         mTagOfChartType = CHART_TYPE_HEART;
                         generateValues(mTagOfChartTime,mTagOfChartType);
-                        generateChart(mTagOfChartTime,mTagOfChartType);
+                        generateChart(mTagOfChartTime, mTagOfChartType);
+                        mTypeRecyclerAdapter.setSelectItem(1);
                         break;
                     case 2:
                         mTagOfChartType = CHART_TYPE_WEIGHT;
                         generateValues(mTagOfChartTime,mTagOfChartType);
                         generateChart(mTagOfChartTime, mTagOfChartType);
+                        mTypeRecyclerAdapter.setSelectItem(2);
                         break;
-//                    case 3:
+                    case 3:
 //                        generateData();
 //                        mTypeOfChart = CHART_TYPE_SUM;
-//                        break;
+                        Toast.makeText(getActivity(), "Developing",Toast.LENGTH_SHORT).show();
+                        break;
+
                 }
             }
         });
         mTypeRecyclerView.setAdapter(mTypeRecyclerAdapter);
-
+        mTimeRecyclerView.setHasFixedSize(true);
 
         return fragmentView;
     }
@@ -640,14 +653,14 @@ public class HistoryFragment extends Fragment {
 
         switch (tagOfTime){
             case CHART_TIME_YEAR:
-                //设置为十一个月前的第一天
+                //设置为十二个月前的第一天
                 poTimeBlock.calendar.add(Calendar.YEAR,-1);
                 poTimeBlock.calendar.set(Calendar.DAY_OF_MONTH, 1);
                 poTimeBlock.numBlock = TimeHelper.MONTH_OF_YEAR;
                 poTimeBlock.typeTimeBlock = HistoryDBHelper.TYPE_BLOCK_MONTH;
                 break;
             case CHART_TIME_QUARTER:
-                //设置
+                //设置为本周第一天的13*7-1天前
                 poTimeBlock.calendar.set(Calendar.DAY_OF_WEEK, 1);
                 poTimeBlock.calendar.add(Calendar.DATE, - (TimeHelper.WEEK_PER_QUARTER) *  7 + 1);
                 poTimeBlock.numBlock = TimeHelper.WEEK_PER_QUARTER;
