@@ -41,12 +41,6 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     public final static String TYPE_BLOCK_DAY = "'%m-%d'";      //月-天
     public final static String TYPE_BLOCK_HOUR = "'%d-%H'";     //日-小时
 
-    public final static String ARG_START_TIME = "StartTime:";
-    public final static String ARG_TIME_TYPE = ",TimeType:";
-    public final static String ARG_FROM = ",From:";
-    public final static String ARG_DATA = ",Date:";
-    public final static String ARG_VALUE = ",Value:";
-
     //以下为模拟注入数据时使用的量
     private long writeTime = 0L;
     public final static String sDeviceAdd = "00:2C:00:00:00:FF";
@@ -271,20 +265,6 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         resetTable(HEART_TABLE_NAME);
         resetTable(STEP_TABLE_NAME);
         resetTable(WEIGHT_TABLE_NAME);
-    }
-
-    public static String createKeyName(long startTime, int numBlock, String typeTimeBlock, String tableName, boolean isDate, String columnName){
-        String keyName = ARG_START_TIME + startTime + ARG_TIME_TYPE + numBlock + " * " + typeTimeBlock + ARG_FROM + tableName;
-        if(isDate)
-            keyName += ARG_DATA + columnName;
-        else
-            keyName += ARG_VALUE + columnName;
-        return keyName;
-    }
-
-    public static String createKeyName(long startTime, int numBlock, String typeTimeBlock, String tableName, boolean isDate){
-        String keyName = createKeyName(startTime, numBlock, typeTimeBlock, tableName, isDate, "");
-        return keyName;
     }
 
     /**
