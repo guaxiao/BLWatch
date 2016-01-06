@@ -53,18 +53,15 @@ public class DataBaseSelectHelper {
                 calendar.add(Calendar.HOUR,mNumBlock);
                 break;
             case HistoryDBHelper.TYPE_BLOCK_DAY:
-                if(mNumBlock <= 7)
-                    startTimeFlag = calendar.get(Calendar.DAY_OF_WEEK);
-                else
-                    startTimeFlag = calendar.get(Calendar.DAY_OF_MONTH);
+                startTimeFlag = calendar.get(Calendar.DAY_OF_MONTH);
                 calendar.add(Calendar.DATE,mNumBlock);
                 break;
             case HistoryDBHelper.TYPE_BLOCK_WEEK:
-                startTimeFlag = calendar.get(Calendar.WEEK_OF_YEAR);
+                startTimeFlag = calendar.get(Calendar.WEEK_OF_YEAR) - 1;
                 calendar.add(Calendar.DATE,7 * mNumBlock);
                 break;
             case HistoryDBHelper.TYPE_BLOCK_MONTH:
-                startTimeFlag = calendar.get(Calendar.MONTH);
+                startTimeFlag = calendar.get(Calendar.MONTH) + 1;
 //                if(numBlock > cursorWindowLimitOfMonthSelect && tableName.equals(HistoryDBHelper.STEP_TABLE_NAME)){
 //                    //查询三个月以上的步数信息时，易发生CursorWindow大于2M的情况，需要分段查询
 //                    long startTimeOfLimit = startTime;
@@ -185,17 +182,20 @@ public class DataBaseSelectHelper {
                             && listLength != 0){
                         if(isDate){
                             lastYearTimeFlag = currentTimeFlag;
+                            Log.d("pointCursor", "OnPassTimeBlock && isDate" + " currentTimeFlag=" + currentTimeFlag + " startTimeFlag=" + startTimeFlag + " lastYearTimeFlag=" + lastYearTimeFlag);
                         }else{
                             //将在第二年中的后半星期的值加到前半星期
                             float fLastValue = tempList.get(listLength - 1);
-                            fLastValue = (fLastValue + pointCursor.getFloat(j)) / 2;
+                            fLastValue = (fLastValue + pointCursor.getFloat(j)) / 2;    //并不严谨的取平均值方式
                             tempList.set(listLength - 1, fLastValue);
+                            mPointCollection.put(keyName,tempList);
                         }
                     }else{
                         if(isDate){
                             Log.d("pointCursor",pointCursor.getString(0) + " " + pointCursor.getString(1));
                             currentTimeFlag = Integer.valueOf(dateBlock.substring(dateBlock.lastIndexOf("-") + 1));
-                            tempList.add((float)currentTimeFlag - startTimeFlag + lastYearTimeFlag);
+                            Log.d("pointCursor", "NoPassTimeBlock && isDate" + " currentTimeFlag=" + currentTimeFlag + " startTimeFlag=" + startTimeFlag + " lastYearTimeFlag=" + lastYearTimeFlag);
+                            tempList.add((float) currentTimeFlag - startTimeFlag + lastYearTimeFlag);
                             mPointCollection.put(keyName, tempList);
                         }else{
                             tempList.add(pointCursor.getFloat(j));
