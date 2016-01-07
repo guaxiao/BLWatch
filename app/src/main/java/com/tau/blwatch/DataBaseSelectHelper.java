@@ -90,53 +90,55 @@ public class DataBaseSelectHelper {
         Log.d("pointCursor", "getCount()=" + pointCursor.getCount());
         Log.d("pointCursor", "getColumnCount()=" + pointCursor.getColumnCount());
 
-        if(mTableName.equals(HistoryDBHelper.STEP_TABLE_NAME)){
+        if(mTableName.equals(HistoryDBHelper.STEP_TABLE_NAME)){ //当查询表为步数，即需要统计所有的极大值时
+            //初始化参数
             pointCursor.moveToFirst();
+            //初始时间
             String dateBlock = pointCursor.getString(0);
+            //时间片内步数小计
             int stepSumOfBlock = 0;
+            //已遍历的函数周期内的极大值
             int stepMaxi = pointCursor.getInt(1);
+            //上一时间片结束位置的函数值
             int lastBlockEndAt = stepMaxi;
-            boolean hasRestartFromZeroInBlock = false;
-//            int countLastWeek = 1;
-//            boolean hasCurrentToNextBlock = false;
-            while (pointCursor.moveToNext()){
-//                Log.d("pointCursor",pointCursor.getColumnCount() + "");
-//                if(!hasCurrentToNextBlock){
-//                if(countLastWeek == 13){
-//                    Date date = new Date(pointCursor.getInt(2) * 1000L);
-//                    Log.d("pointCursor",date.toString());
-//                }
+            //时间片内的第一个递增函数是否结束
+            boolean hasPassedFirstTimeBlock = false;
 
+            while (pointCursor.moveToNext()){
+
+                //本次遍历的时间
                 String dateTemp = pointCursor.getString(0);
+                //本次取得的函数值
                 int stepTemp = pointCursor.getInt(1);
-                if(!dateBlock.equals(dateTemp)){    //抵达下一时间片
-//                    hasCurrentToNextBlock = true;
-//                    countLastWeek ++;
-                    if(!hasRestartFromZeroInBlock){ //若本次递增函数为时间片内的第一个递增函数
+                if(!dateBlock.equals(dateTemp)){    //本次时间与初始时间不同，则说明抵达下一时间片
+
+                    if(!hasPassedFirstTimeBlock){ //若本次递增函数为时间片内的第一个递增函数
                         stepSumOfBlock += stepMaxi - lastBlockEndAt;    //则将此极大值与上一时间片的结束值之差加入小计
                     }else{  //若不是第一个递增函数
                         stepSumOfBlock += stepMaxi; //则直接将此极大值加入小计
                     }
 
-                    //存储上一时间片与其步数小计
+                    //初始化时间与函数值的key
                     String keyNameDate = createKeyName(true, pointCursor.getColumnName(0));
                     String keyNameValue = createKeyName(false, pointCursor.getColumnName(1));
-
+                    //存储上一时间片与其步数小计
                     onPassTimeBlockInMaxiCalculate(keyNameDate, keyNameValue, dateBlock, stepSumOfBlock);
 
                     //置极大值为当前值，开始下一个递增函数极大值的寻找
                     stepMaxi = stepTemp;
                     //记录本时间片结束时的步数数据
                     lastBlockEndAt = stepTemp;
-                    //初始化下一时间片内第一次递增函数结束状态为未结束
-                    hasRestartFromZeroInBlock = false;
+                    //置下一时间片的第一个递增函数为未结束
+                    hasPassedFirstTimeBlock = false;
                     //重置时间片内步数小计
                     stepSumOfBlock = 0;
                     //置时间片的值为当前时间片
                     dateBlock = dateTemp;
                 }else{  //未抵达下一时间片
-                    if(stepTemp < stepMaxi){    //当前值小于上一次的值，则上一次的值为极大值
-                        if(!hasRestartFromZeroInBlock){ //若本次递增函数为时间片内的第一个递增函数
+                    if(stepTemp < stepMaxi){    //当前函数值小于上一次的值，
+                                                //则说明上一次的值为上一递增函数的极大值，
+                                                //本次函数已经抵达下一个递增函数的开始位置
+                        if(!hasPassedFirstTimeBlock){ //若本次递增函数为时间片内的第一个递增函数
                             stepSumOfBlock += stepMaxi - lastBlockEndAt;    //则将此极大值与上一时间片的结束值之差加入小计
                         }else{  //若不是第一个递增函数
                             stepSumOfBlock += stepMaxi; //则直接将此极大值加入小计
@@ -144,42 +146,49 @@ public class DataBaseSelectHelper {
                         //置极大值为当前值，开始下一个递增函数的极大值寻找
                         stepMaxi = stepTemp;
                         //置时间片内第一次递增函数结束状态为已结束
-                        hasRestartFromZeroInBlock = true;
-                    }else{
-                        stepMaxi = stepTemp;
+                        hasPassedFirstTimeBlock = true;
+                    }else{  //当前函数值大于上一次的值，这说明本次递增函数还在继续
+                        stepMaxi = stepTemp;    //记录新的极大值
                     }
                 }
             }
 
-            //在数据遍历结束后，处理最后一个时间片的值
-            if(!hasRestartFromZeroInBlock){ //若本次递增函数为时间片内的第一个递增函数
+            /*
+             *  在数据遍历结束后，处理最后一个时间片的值
+             */
+            if(!hasPassedFirstTimeBlock){ //若本次递增函数为时间片内的第一个递增函数
                 stepSumOfBlock += stepMaxi - lastBlockEndAt;    //则将此极大值与上一时间片的结束值之差加入小计
             }else{  //若不是第一个递增函数
                 stepSumOfBlock += stepMaxi; //则直接将此极大值加入小计
             }
 
-            //存储上一时间片与其步数小计
+            //初始化时间与函数值的key
             String keyNameDate = createKeyName(true, pointCursor.getColumnName(0));
             String keyNameValue = createKeyName(false, pointCursor.getColumnName(1));
 
+            //存储上一时间片与其步数小计
             onPassTimeBlockInMaxiCalculate(keyNameDate, keyNameValue, dateBlock, stepSumOfBlock);
 
-        }else{
+        }else{  //当查询表为不为步数，即需要统计平均值时
             while(pointCursor.moveToNext()){//遍历每一行
+                //初始化时间
                 String dateBlock = pointCursor.getString(0);
                 Log.d("pointCursor", "not step:" + dateBlock);
                 for(int j = 0;j < pointCursor.getColumnCount();j++){//遍历每一列
+                    //记录当前列是否为日期列
                     boolean isDate = (pointCursor.getColumnName(j).equals(HistoryDBHelper.ARG_TIME_BLOCK));
+                    //构建当前列的key
                     String keyName = createKeyName(isDate, pointCursor.getColumnName(j));
+                    //依照列的key试图取得当前列在Map里的值
                     ArrayList<Float> tempList = mPointCollection.get(keyName);
-
+                    //若果Map中取不到值
                     if(tempList == null)
+                        //则初始化本列的值
                         tempList = new ArrayList<>();
 
                     int listLength = tempList.size();
-                    //若在年-星期时间片下，此星期跨过了两个年份时
                     if(mTypeTimeBlock.equals(HistoryDBHelper.TYPE_BLOCK_WEEK) && dateBlock.endsWith("-00")
-                            && listLength != 0){
+                            && listLength != 0){    //若在年-星期时间片下，此星期跨过了两个年份时
                         if(isDate){
                             lastYearTimeFlag = currentTimeFlag;
                             Log.d("pointCursor", "OnPassTimeBlock && isDate" + " currentTimeFlag=" + currentTimeFlag + " startTimeFlag=" + startTimeFlag + " lastYearTimeFlag=" + lastYearTimeFlag);
@@ -190,7 +199,7 @@ public class DataBaseSelectHelper {
                             tempList.set(listLength - 1, fLastValue);
                             mPointCollection.put(keyName,tempList);
                         }
-                    }else{
+                    }else{  //没有跨过年份的正常情况
                         if(isDate){
                             Log.d("pointCursor",pointCursor.getString(0) + " " + pointCursor.getString(1));
                             currentTimeFlag = Integer.valueOf(dateBlock.substring(dateBlock.lastIndexOf("-") + 1));
@@ -217,15 +226,14 @@ public class DataBaseSelectHelper {
             tempListValue = new ArrayList<>();
 
         int listLength = tempListValue.size();
-        //若在年-星期时间片下，此星期跨过了两个年份时
         if(mTypeTimeBlock.equals(HistoryDBHelper.TYPE_BLOCK_WEEK) && dateBlock.endsWith("-00")
-                && listLength != 0){
+                && listLength != 0){    //若在年-星期时间片下，此星期跨过了两个年份时
             lastYearTimeFlag = currentTimeFlag;
             //将在第二年中的后半星期的值加到前半星期
             float fLastValue = tempListValue.get(listLength - 1);
             fLastValue += stepSumOfBlock;
             tempListValue.set(listLength - 1,fLastValue);
-        }else{
+        }else{  //没有跨过年份的正常情况
             currentTimeFlag = Integer.valueOf(dateBlock.substring(dateBlock.lastIndexOf("-") + 1));
             tempListDate.add((float)currentTimeFlag - startTimeFlag + lastYearTimeFlag);
             mPointCollection.put(keyNameDate, tempListDate);
