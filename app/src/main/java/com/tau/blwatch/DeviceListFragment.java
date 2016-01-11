@@ -90,7 +90,10 @@ public class DeviceListFragment extends ListFragment {
                         public void run() {
                             //添加蓝牙设备
                             mAdapter.addDevice(device);
-                            Log.i("addDevice",device.getName());
+                            if(device.getName() == null)
+                                Log.i("addDevice","name=null");
+                            else
+                                Log.i("addDevice",device.getName());
                             //提醒数据观察者，同步数据
                             mAdapter.notifyDataSetChanged();
                         }
