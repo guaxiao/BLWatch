@@ -18,6 +18,7 @@
     <string name="unknown_characteristic">Unknown characteristic</string>
     <string name="unknown_service">Unknown service</string>
     <string name="unknown_device">未知设备</string>
+    <string name="unknown_device_address">未知MAC地址</string>
     <string name="ble_not_supported">err:设备不支持BLE</string>
     <string name="bluetooth_not_supported">err:设备不支持蓝牙</string>
 
