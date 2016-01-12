@@ -2,6 +2,7 @@ package com.tau.blwatch;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -41,18 +42,14 @@ import lecho.lib.hellocharts.util.ChartUtils;
 import lecho.lib.hellocharts.view.ComboLineColumnChartView;
 
 public class HistoryFragment extends Fragment {
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_USERINFO = "userInfo";
-    private static final String ARG_DEVICE_NAME = "deviceName";
-    private static final String ARG_DEVICE_ADD = "deviceAdd";
     private static final String ARG_LASTFRAGMENT = "lastFragment";
+    private static final String ARG_DEVICE_SER = "deviceSerializable";
 
-    // TODO: Rename and change types of parameters
     private String mUserInfo;
-    private String mDeviceName;
-    private String mDeviceAdd;
     private String mLastFragment;
+    private SerializableDevice mSerializableDevice;
+    private BluetoothDevice mDevice;
 
     private OnJumpToOtherFragmentCallBack mJumpCallBack;
     private OnSelectDataBaseCallBack mSelectDBCallBack;
@@ -104,18 +101,16 @@ public class HistoryFragment extends Fragment {
      * this fragment using the provided parameters.
      *
      * @param userInfo 用户信息，为空或NULL时代表用户未登录.
-     * @param deviceName 手表名称，同一时间只能使用一个手表.
-     * @param deviceAdd 手表MAC，同一时间只能使用一个手表.
+     * @param device 设备信息的序列化
      * @param lastFragment 跳转源页面.
      * @return A new instance of fragment WalkFragment.
      */
     // TODO: Rename and change types and number of parameters
-    public static HistoryFragment newInstance(String userInfo, String deviceName, String deviceAdd, String lastFragment) {
+    public static HistoryFragment newInstance(String userInfo, BluetoothDevice device, String lastFragment) {
         HistoryFragment fragment = new HistoryFragment();
         Bundle args = new Bundle();
         args.putString(ARG_USERINFO, userInfo);
-        args.putString(ARG_DEVICE_NAME, deviceName);
-        args.putString(ARG_DEVICE_ADD, deviceAdd);
+        args.putSerializable(ARG_DEVICE_SER, new SerializableDevice().setDevice(device));
         args.putString(ARG_LASTFRAGMENT, lastFragment);
         fragment.setArguments(args);
         return fragment;
@@ -148,8 +143,11 @@ public class HistoryFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             mUserInfo = getArguments().getString(ARG_USERINFO);
-            mDeviceName = getArguments().getString(ARG_DEVICE_NAME);
-            mDeviceAdd = getArguments().getString(ARG_DEVICE_ADD);
+            mSerializableDevice = (SerializableDevice)getArguments().getSerializable(ARG_DEVICE_SER);
+            if(mSerializableDevice != null)
+                mDevice = mSerializableDevice.getDevice();
+            else
+                mDevice = null;
             mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
         }
 
@@ -170,7 +168,7 @@ public class HistoryFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 //跳转至设备列表界面
-                mJumpCallBack.onJumpToDeviceList(mDeviceName, mDeviceAdd);
+                mJumpCallBack.onJumpToDeviceList(mDevice);
                 Log.i("FragmentWList", "From " + this.getClass().getSimpleName());
             }
         });
@@ -772,7 +770,7 @@ public class HistoryFragment extends Fragment {
      * 回调：跳转至设备列表界面
      */
     public interface OnJumpToOtherFragmentCallBack {
-        void onJumpToDeviceList(String deviceName,String deviceADD);
+        void onJumpToDeviceList(BluetoothDevice device);
     }
 
     /**

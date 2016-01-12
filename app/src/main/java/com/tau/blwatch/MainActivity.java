@@ -1,12 +1,10 @@
 package com.tau.blwatch;
 
 import android.app.Activity;
-import android.content.Context;
+import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -18,17 +16,14 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.ns.nsbletizhilib.TiZhiGattAttributesHelper;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.CancellationException;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
@@ -53,19 +48,14 @@ public class MainActivity extends AppCompatActivity
 
     //app内的通信信息 <基于fragment工厂模式化>
     private String mUserInfo;
-    private String mDeviceName;
-    private String mDeviceAdd;
+    private BluetoothDevice mDevice;
     private String lastFragment = "";
-    private String unusedString = "";
-
-    private FloatingActionButton mFab_bottom,  mFab_top, mFab_bottom_stop;
 
     //来自 BluetoothAdapter.ACTION_REQUEST_ENABLE 弹出窗口的activity回退请求码
     private static final int REQUEST_ENABLE_BT = 65537;
 
     private HistoryDBHelper mHistoryDBHelper;
     private SQLiteDatabase mHistoryDatabase;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,16 +97,10 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        //定义浮动按钮
-        mFab_bottom = (FloatingActionButton) findViewById(R.id.fab_bottom);
-        mFab_top = (FloatingActionButton) findViewById(R.id.fab_top);
-        mFab_bottom_stop = (FloatingActionButton) findViewById(R.id.fab_bottom_stop);
-
-
         //初始化fragment
         mFragmentManager.beginTransaction()
                 .replace(R.id.mainFrame, WalkFragment
-                        .newInstance(mUserInfo, mDeviceName, mDeviceAdd, lastFragment))
+                        .newInstance(mUserInfo, mDevice, lastFragment))
                 .commit();
         //设置初始化actionBar标题
         setTitle(R.string.device_null);
@@ -186,20 +170,17 @@ public class MainActivity extends AppCompatActivity
         if (id == R.id.nav_walk) {//进入WALK页面
             mFragmentManager.beginTransaction()
                     .replace(R.id.mainFrame, WalkFragment
-                            .newInstance(mUserInfo, mDeviceName, mDeviceAdd, lastFragment))
+                            .newInstance(mUserInfo, mDevice, lastFragment))
                     .commit();
             //设置actionBar标题
-            if(mDeviceName == null || mDeviceAdd == null)
-                setTitle(R.string.device_null);
-            else
-                setTitle(mDeviceName);
+            setTitleByDevice(mDevice);
 
             Log.d("ItemSelected", getVisibleFragment().toString());
 
         } else if (id == R.id.nav_history) { //进入HISTORY页面
             mFragmentManager.beginTransaction()
                     .replace(R.id.mainFrame, HistoryFragment
-                            .newInstance(mUserInfo, mDeviceName, mDeviceAdd, lastFragment))
+                            .newInstance(mUserInfo, mDevice, lastFragment))
                     .commit();
             //设置actionBar标题
             setTitle(R.string.nav_history_title);
@@ -209,7 +190,7 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_watch_list) { //进入WATCHLIST界面
             mFragmentManager.beginTransaction()
                     .replace(R.id.mainFrame, DeviceListFragment
-                            .newInstance(mUserInfo, mDeviceName, mDeviceAdd, lastFragment))
+                            .newInstance(mUserInfo, mDevice, lastFragment))
                     .commit();
             //设置actionBar标题
             setTitle(R.string.nav_watch_list_title);
@@ -236,23 +217,21 @@ public class MainActivity extends AppCompatActivity
     /**
      * 回调实现：跳转WATCHLIST界面
      */
-    public void onJumpToDeviceList(String deviceName,String deviceADD){
-        mDeviceName = deviceName;
-        mDeviceAdd = deviceADD;
+    public void onJumpToDeviceList(BluetoothDevice device){
+        mDevice = device;
         mFragmentManager.beginTransaction()
                 .replace(R.id.mainFrame, DeviceListFragment
-                        .newInstance(mUserInfo, mDeviceName, mDeviceAdd, lastFragment))
+                        .newInstance(mUserInfo, mDevice, lastFragment))
                 .commit();
         //设置actionBar标题
         setTitle(R.string.nav_watch_list_title);
     }
 
-    public void onJumpToHistoryTable(String deviceName,String deviceADD){
-        mDeviceName = deviceName;
-        mDeviceAdd = deviceADD;
+    public void onJumpToHistoryTable(BluetoothDevice device){
+        mDevice = device;
         mFragmentManager.beginTransaction()
                 .replace(R.id.mainFrame, HistoryFragment
-                        .newInstance(mUserInfo, mDeviceName, mDeviceAdd, lastFragment))
+                        .newInstance(mUserInfo, mDevice, lastFragment))
                 .commit();
         //设置actionBar标题
         setTitle(R.string.nav_history_title);
@@ -262,7 +241,7 @@ public class MainActivity extends AppCompatActivity
      * 回调实现：从数据库获取数据
      * @param startTime 起始时间
      * @param numBlock 时间的段数
-     * @return
+     * @return  以DataBaseSelectHelper.createKeyName标准为Key，存储查询到的有效日期组及其对应的结果数据
      */
     public HashMap<String,ArrayList<Float>> onSelectData(long startTime, int numBlock, String typeTimeBlock, String tableName){
         DataBaseSelectHelper dataBaseSelectHelper = new DataBaseSelectHelper(mHistoryDBHelper,startTime,numBlock,typeTimeBlock,tableName);
@@ -278,11 +257,10 @@ public class MainActivity extends AppCompatActivity
 
     /**
      * 回调实现：选择LE设备，跳转到DEVICE_LIST
-     * @param deviceName LE设备名
-     * @param deviceAdd LE设备地址
+     * @param device LE设备
      */
-    public void onChooseLeDevice(String deviceName, String deviceAdd){
-        if(deviceAdd != null && mDeviceAdd != null && !deviceAdd.equals(mDeviceAdd)){
+    public void onChooseLeDevice(BluetoothDevice device){
+        if(device != null && mDevice != null && !device.equals(mDevice)){
             //若选择了非当前设备
             try{
                 unregisterReceiver(mWalkFragment.mGattUpdateReceiver);  //注销广播监听
@@ -294,18 +272,14 @@ public class MainActivity extends AppCompatActivity
                 Log.d("deviceChange","TiZhiGattAttributesHelper is NULL");
             }
         }
-        mDeviceName = deviceName;
-        mDeviceAdd = deviceAdd;
+        mDevice = device;
 
         mFragmentManager.beginTransaction()
                 .replace(R.id.mainFrame, WalkFragment
-                        .newInstance(mUserInfo, mDeviceName, mDeviceAdd, NAME_DeviceListFragment_JUMP))
+                        .newInstance(mUserInfo, mDevice, NAME_DeviceListFragment_JUMP))
                 .commit();
         //设置actionBar标题
-        if(mDeviceName == null || mDeviceAdd == null)
-            setTitle(R.string.device_null);
-        else
-            setTitle(mDeviceName);
+        setTitleByDevice(mDevice);
     }
 
     /**
@@ -316,7 +290,7 @@ public class MainActivity extends AppCompatActivity
      */
     public void onSendHeartToDB(int avgHeart, int maxHeart, int minHeart){
         long writeTime = new Date().getTime();
-        mHistoryDBHelper.insertHeart(writeTime, mDeviceAdd, avgHeart, maxHeart ,minHeart);
+        mHistoryDBHelper.insertHeart(writeTime, mDevice.getAddress(), avgHeart, maxHeart ,minHeart);
     }
 
     /**
@@ -325,16 +299,16 @@ public class MainActivity extends AppCompatActivity
      */
     public void onSendStepToDB(int countStep){
         long writeTime = new Date().getTime();
-        mHistoryDBHelper.insertStep(writeTime, mDeviceAdd, countStep);
+        mHistoryDBHelper.insertStep(writeTime, mDevice.getAddress(), countStep);
     }
 
     /**
      * 回调实现：将体重数值传至数据库
-     * @param countWeight
+     * @param countWeight   体重数值
      */
     public void onSendWeightToDB(double countWeight){
         long writeTime = new Date().getTime();
-        mHistoryDBHelper.insertWeight(writeTime, mDeviceAdd, countWeight);
+        mHistoryDBHelper.insertWeight(writeTime, mDevice.getAddress(), countWeight);
     }
 
     @Override
@@ -346,7 +320,7 @@ public class MainActivity extends AppCompatActivity
         if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
             mFragmentManager.beginTransaction()
                     .replace(R.id.mainFrame, WalkFragment
-                            .newInstance(mUserInfo, mDeviceName, mDeviceAdd, lastFragment))
+                            .newInstance(mUserInfo, mDevice, lastFragment))
                     .commit();
             setTitle(R.string.nav_walk_title);
         }
@@ -360,5 +334,16 @@ public class MainActivity extends AppCompatActivity
                 return fragment;
         }
         return null;
+    }
+
+    public void setTitleByDevice(BluetoothDevice device){
+        if(device == null)
+            setTitle(R.string.device_null);
+        else{
+            if(device.getName() == null)
+                setTitle(R.string.unknown_device);
+            else
+                setTitle(device.getName());
+        }
     }
 }
