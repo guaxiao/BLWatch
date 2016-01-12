@@ -1,6 +1,7 @@
 package com.tau.blwatch;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.content.BroadcastReceiver;
@@ -9,20 +10,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
-import android.os.Message;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
+import android.support.design.widget.FloatingActionButton;;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,26 +26,20 @@ import com.ns.nsbletizhilib.TiZhiData;
 import com.ns.nsbletizhilib.TiZhiGattAttributesHelper;
 
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 
 public class WalkFragment extends Fragment {
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_USERINFO = "userInfo";
-    private static final String ARG_DEVICE_NAME = "deviceName";
-    private static final String ARG_DEVICE_ADD = "deviceAdd";
     private static final String ARG_LASTFRAGMENT = "lastFragment";
+    private static final String ARG_DEVICE_SER = "deviceSerializable";
+
+    private String mUserInfo;
+    private String mLastFragment;
+    private SerializableDevice mSerializableDevice;
+    private BluetoothDevice mDevice;
 
     private static final String DEVICE_PTWATCH = "PTWATCH";
     private static final String DEVICE_NSW04 = "NS-W04";
-
-    // TODO: Rename and change types of parameters
-    private String mUserInfo;
-    private String mDeviceName;
-    private String mDeviceAdd;
-    private String mLastFragment;
 
     private OnJumpToOtherFragmentCallBack mJumpCallBack;
     private OnSqlIOCallBack mSqlIOCallBack;
@@ -74,7 +63,7 @@ public class WalkFragment extends Fragment {
     private final String LIST_NAME = "NAME";
     private final String LIST_UUID = "UUID";
 
-    private FrameLayout mBaseLayout;
+//    private FrameLayout mBaseLayout;
     private FloatingActionButton mFab_bottom, mFab_top, mFab_bottom_stop;
     private TextView mHeartCount,mWalkStep;
     private TextView deRecvDeviceName, deRecvDeviceAdd;
@@ -99,7 +88,7 @@ public class WalkFragment extends Fragment {
             // Automatically connects to the device upon successful start-up
             // initialization.
             // 连接上设备后并且成功初始化
-            mBluetoothLeService.connect(mDeviceAdd);
+            mBluetoothLeService.connect(mDevice.getName());
         }
 
         @Override
@@ -153,18 +142,15 @@ public class WalkFragment extends Fragment {
      * this fragment using the provided parameters.
      *
      * @param userInfo 用户信息，为空或NULL时代表用户未登录.
-     * @param deviceName 手表名称，同一时间只能使用一个手表.
-     * @param deviceAdd 手表MAC，同一时间只能使用一个手表.
+     * @param device 设备信息的序列化
      * @param lastFragment 跳转源页面.
      * @return A new instance of fragment WalkFragment.
      */
-    // TODO: Rename and change types and number of parameters
-    public static WalkFragment newInstance(String userInfo, String deviceName, String deviceAdd, String lastFragment) {
+    public static WalkFragment newInstance(String userInfo, BluetoothDevice device, String lastFragment) {
         WalkFragment fragment = new WalkFragment();
         Bundle args = new Bundle();
         args.putString(ARG_USERINFO, userInfo);
-        args.putString(ARG_DEVICE_NAME, deviceName);
-        args.putString(ARG_DEVICE_ADD, deviceAdd);
+        args.putSerializable(ARG_DEVICE_SER, new SerializableDevice().setDevice(device));
         args.putString(ARG_LASTFRAGMENT, lastFragment);
         fragment.setArguments(args);
         return fragment;
@@ -196,8 +182,11 @@ public class WalkFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             mUserInfo = getArguments().getString(ARG_USERINFO);
-            mDeviceName = getArguments().getString(ARG_DEVICE_NAME);
-            mDeviceAdd = getArguments().getString(ARG_DEVICE_ADD);
+            mSerializableDevice = (SerializableDevice)getArguments().getSerializable(ARG_DEVICE_SER);
+            if(mSerializableDevice != null)
+                mDevice = mSerializableDevice.getDevice();
+            else
+                mDevice = null;
             mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
         }
 
@@ -211,12 +200,11 @@ public class WalkFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        WalkFragment leWalkFragment = this;
         final View fragmentView = inflater.inflate(R.layout.fragment_walk, container,
                 false);
 
         //得到容器ViewGroup
-        mBaseLayout = (FrameLayout) fragmentView.findViewById(R.id.baseLayout_walk);
+//        mBaseLayout = (FrameLayout) fragmentView.findViewById(R.id.baseLayout_walk);
 
         //定义步数计数器
         mWalkStep = (TextView) fragmentView.findViewById(R.id.textStep);
@@ -232,25 +220,26 @@ public class WalkFragment extends Fragment {
         mFab_bottom.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(mDeviceAdd == null || mDeviceName == null){
+                if(mDevice == null){
                     //跳转至设备列表界面
-                    mJumpCallBack.onJumpToDeviceList(mDeviceName,mDeviceAdd);
+                    mJumpCallBack.onJumpToDeviceList(null);
                     Log.d("FragmentWList","From " + this.getClass().getSimpleName());
                 }else{
-                    switch (mDeviceName){
-                        case DEVICE_NSW04:
-                            //重新与体重秤连接
-                            mFab_bottom_stop.show();
-                            break;
-                        case DEVICE_PTWATCH:
-                            //重新上传同步数据
-                            BLEUploadData(countTempConf);  //上传同步率数据
-                            Log.d("mGattCharacteristics", mGattCharacteristics.size() + "");
-                            Toast.makeText(getActivity(), "Data Uploading", Toast.LENGTH_SHORT).show();
-                            Log.d("WalkFragment", "updateData");
-                            mFab_bottom_stop.show();
-                            break;
-                    }
+                    if (mDevice.getName() != null)
+                        switch (mDevice.getName()){
+                            case DEVICE_NSW04:
+                                //重新与体重秤连接
+                                mFab_bottom_stop.show();
+                                break;
+                            case DEVICE_PTWATCH:
+                                //重新上传同步数据
+                                BLEUploadData(countTempConf);  //上传同步率数据
+                                Log.d("mGattCharacteristics", mGattCharacteristics.size() + "");
+                                Toast.makeText(getActivity(), "Data Uploading", Toast.LENGTH_SHORT).show();
+                                Log.d("WalkFragment", "updateData");
+                                mFab_bottom_stop.show();
+                                break;
+                        }
                 }
 
             }
@@ -262,12 +251,12 @@ public class WalkFragment extends Fragment {
             public void onClick(View v) {
                 Toast.makeText(getActivity(), "Disconnect Success ", Toast.LENGTH_SHORT).show();
 
-                if(mDeviceAdd == null || mDeviceName == null){
+                if(mDevice == null){
                     //跳转至设备列表界面
-                    mJumpCallBack.onJumpToDeviceList(mDeviceName,mDeviceAdd);
+                    mJumpCallBack.onJumpToDeviceList(null);
                     Log.d("FragmentWList","From " + this.getClass().getSimpleName());
                 }else{
-                    switch (mDeviceName){
+                    switch (mDevice.getName()){
                         case DEVICE_NSW04:
                             break;
                         case DEVICE_PTWATCH:
@@ -276,15 +265,14 @@ public class WalkFragment extends Fragment {
                             break;
                     }
                     //跳转至历史统计界面
-                    mJumpCallBack.onJumpToHistoryTable(mDeviceName, mDeviceAdd);
+                    mJumpCallBack.onJumpToHistoryTable(mDevice);
                 }
             }
         });
 
-        /**
-         * 从设备列表选择了设备跳转而来，则进行自动连接
-         */
-        if(mDeviceName != null && mDeviceAdd != null && mLastFragment != null
+
+         //从设备列表选择了设备跳转而来，则进行自动连接
+        if(mDevice != null && mLastFragment != null
                 && mLastFragment.equals(MainActivity.NAME_DeviceListFragment_JUMP)){
             isAtomConnect = true;
             mFab_bottom_stop.show();
@@ -293,17 +281,34 @@ public class WalkFragment extends Fragment {
 //                    .setAction("Action", null).show();
         }
 
+        //设置左下角的设备名与设备地址显示TextView {debug}
         deRecvDeviceName = (TextView) fragmentView.findViewById(R.id.textRecvDeviceName);
         deRecvDeviceAdd = (TextView) fragmentView.findViewById(R.id.textRecvDeviceAdd);
-        deRecvDeviceName.setText(mDeviceName);
-        deRecvDeviceAdd.setText(mDeviceAdd);
-        if(mDeviceName != null){
-            switch (mDeviceName){
+
+        if(mDevice == null){
+            Log.d("WalkFragment","mDevice==null");
+            deRecvDeviceName.setText("");
+            deRecvDeviceAdd.setText("");
+        }else{
+            if(mDevice.getName() == null)
+                deRecvDeviceName.setText(R.string.unknown_device);
+            else
+                deRecvDeviceName.setText(mDevice.getName());
+
+            if(mDevice.getAddress() == null)
+                deRecvDeviceAdd.setText(R.string.unknown_device_address);
+            else
+                deRecvDeviceAdd.setText(mDevice.getAddress());
+        }
+
+        //根据连接设备的类型不同启动相应的蓝牙连接协议
+        if(mDevice != null){
+            switch (mDevice.getName()){
                 case DEVICE_PTWATCH:
                     Log.d("onCreate", DEVICE_PTWATCH);
                     //启动手表的蓝牙服务
                     Intent gattServiceIntent = new Intent(getActivity(), BluetoothLeService.class);
-                    getActivity().bindService(gattServiceIntent, mServiceConnection, getActivity().BIND_AUTO_CREATE);
+                    getActivity().bindService(gattServiceIntent, mServiceConnection, Activity.BIND_AUTO_CREATE);
                     Log.d("mGattCharacteristics", mGattCharacteristics.size() + "");
                     //第一次与设备通讯前，更新UI至等待状态
                     if(isAtomConnect){
@@ -316,8 +321,7 @@ public class WalkFragment extends Fragment {
                     Log.d("onCreate", DEVICE_NSW04);
                     // 初始化蓝牙连接服务助手
                     TiZhiGattAttributesHelper.initialize(getActivity());
-                    // 每次连接蓝牙时，需要先设置用户信息 setdUserInfo(性别，年龄岁，身高cm)；性别：1：男，0：女
-//            TiZhiGattAttributesHelper.getInstance().setdUserInfo(1, 22, 160);
+                    //启动蓝牙连接线程
                     TZGattThread mTZGattThread = new TZGattThread();
                     mTZGattThread.start();
                     //第一次与设备通讯前，更新UI至等待状态
@@ -340,11 +344,11 @@ public class WalkFragment extends Fragment {
         mFab_top.hide();
         mFab_bottom_stop.hide();
 
-        if(mDeviceName != null && mDeviceName.equals(DEVICE_PTWATCH)){
+        if(mDevice != null && mDevice.getName().equals(DEVICE_PTWATCH)){
             //启动广播接收器
             getActivity().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
             if (mBluetoothLeService != null) {
-                final boolean result = mBluetoothLeService.connect(mDeviceAdd);
+                final boolean result = mBluetoothLeService.connect(mDevice.getAddress());
                 Log.d("WalkFragment", "Connect request result=" + result);
             }
         }
@@ -438,6 +442,7 @@ public class WalkFragment extends Fragment {
             }
         });
 
+        mlBLEUploadDataThread.start();
     }
 
     // 遍历GATT服务
@@ -447,43 +452,43 @@ public class WalkFragment extends Fragment {
         Log.d("WalkFragment","displayGattServices");
         if (gattServices == null)
             return;
-        String uuid = null;
-        String unknownServiceString = getResources().getString(
-                R.string.unknown_service);
-        String unknownCharaString = getResources().getString(
-                R.string.unknown_characteristic);
-        ArrayList<HashMap<String, String>> gattServiceData = new ArrayList<HashMap<String, String>>();
-        ArrayList<ArrayList<HashMap<String, String>>> gattCharacteristicData = new ArrayList<ArrayList<HashMap<String, String>>>();
-        mGattCharacteristics = new ArrayList<ArrayList<BluetoothGattCharacteristic>>();
+        String uuid;
+//        String unknownServiceString = getResources().getString(
+//                R.string.unknown_service);
+//        String unknownCharaString = getResources().getString(
+//                R.string.unknown_characteristic);
+//        ArrayList<HashMap<String, String>> gattServiceData = new ArrayList<HashMap<String, String>>();
+//        ArrayList<ArrayList<HashMap<String, String>>> gattCharacteristicData = new ArrayList<ArrayList<HashMap<String, String>>>();
+        mGattCharacteristics = new ArrayList<>();
 
         // Loops through available GATT Services.
         for (BluetoothGattService gattService : gattServices) {
-            HashMap<String, String> currentServiceData = new HashMap<String, String>();
+//            HashMap<String, String> currentServiceData = new HashMap<String, String>();
             uuid = gattService.getUuid().toString();
             if (uuid.equals("0000180d-0000-1000-8000-00805f9b34fb")) {
-                currentServiceData
-                        .put(LIST_NAME, SampleGattAttributes.lookup(uuid,
-                                unknownServiceString));
-                currentServiceData.put(LIST_UUID, uuid);
-                gattServiceData.add(currentServiceData);
+//                currentServiceData
+//                        .put(LIST_NAME, SampleGattAttributes.lookup(uuid,
+//                                unknownServiceString));
+//                currentServiceData.put(LIST_UUID, uuid);
+//                gattServiceData.add(currentServiceData);
 
-                ArrayList<HashMap<String, String>> gattCharacteristicGroupData = new ArrayList<HashMap<String, String>>();
+//                ArrayList<HashMap<String, String>> gattCharacteristicGroupData = new ArrayList<HashMap<String, String>>();
                 List<BluetoothGattCharacteristic> gattCharacteristics = gattService
                         .getCharacteristics();
-                ArrayList<BluetoothGattCharacteristic> charas = new ArrayList<BluetoothGattCharacteristic>();
+                ArrayList<BluetoothGattCharacteristic> charas = new ArrayList<>();
 
                 // Loops through available Characteristics.
                 for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {
                     charas.add(gattCharacteristic);
-                    HashMap<String, String> currentCharaData = new HashMap<String, String>();
-                    uuid = gattCharacteristic.getUuid().toString();
-                    currentCharaData.put(LIST_NAME, SampleGattAttributes
-                            .lookup(uuid, unknownCharaString));
-                    currentCharaData.put(LIST_UUID, uuid);
-                    gattCharacteristicGroupData.add(currentCharaData);
+//                    HashMap<String, String> currentCharaData = new HashMap<String, String>();
+//                    uuid = gattCharacteristic.getUuid().toString();
+//                    currentCharaData.put(LIST_NAME, SampleGattAttributes
+//                            .lookup(uuid, unknownCharaString));
+//                    currentCharaData.put(LIST_UUID, uuid);
+//                    gattCharacteristicGroupData.add(currentCharaData);
                 }
                 mGattCharacteristics.add(charas);
-                gattCharacteristicData.add(gattCharacteristicGroupData);
+//                gattCharacteristicData.add(gattCharacteristicGroupData);
             }
         }
 
@@ -505,26 +510,26 @@ public class WalkFragment extends Fragment {
         return intentFilter;
     }
 
-    // 16进制转为byte
-    public byte[] hexStringToBytes(String hexString) {
-        if (hexString == null || hexString.equals("")) {
-            return null;
-        }
-        hexString = hexString.toUpperCase();
-        int length = hexString.length() / 2;
-        char[] hexChars = hexString.toCharArray();
-        byte[] d = new byte[length];
-        for (int i = 0; i < length; i++) {
-            int pos = i * 2;
-            d[i] = (byte) (charToByte(hexChars[pos]) << 4 | charToByte(hexChars[pos + 1]));
-        }
-        return d;
-    }
-
-    private byte charToByte(char c) {
-        return (byte) "0123456789ABCDEF".indexOf(c);
-
-    }
+//    // 16进制转为byte
+//    public byte[] hexStringToBytes(String hexString) {
+//        if (hexString == null || hexString.equals("")) {
+//            return null;
+//        }
+//        hexString = hexString.toUpperCase();
+//        int length = hexString.length() / 2;
+//        char[] hexChars = hexString.toCharArray();
+//        byte[] d = new byte[length];
+//        for (int i = 0; i < length; i++) {
+//            int pos = i * 2;
+//            d[i] = (byte) (charToByte(hexChars[pos]) << 4 | charToByte(hexChars[pos + 1]));
+//        }
+//        return d;
+//    }
+//
+//    private byte charToByte(char c) {
+//        return (byte) "0123456789ABCDEF".indexOf(c);
+//
+//    }
 
     class TZGattThread extends Thread{
         @Override
@@ -545,7 +550,7 @@ public class WalkFragment extends Fragment {
                                     getActivity().runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
-                                            mWalkStep.setText(formattedWeight + "");
+                                            mWalkStep.setText(Float.toString(formattedWeight));
                                         }
                                     });
 
@@ -577,17 +582,17 @@ public class WalkFragment extends Fragment {
      * 回调：跳转至设备列表界面
      */
     public interface OnJumpToOtherFragmentCallBack {
-        public void onJumpToDeviceList(String deviceName,String deviceADD);
-        public void onJumpToHistoryTable(String deviceName,String deviceADD);
+        void onJumpToDeviceList(BluetoothDevice device);
+        void onJumpToHistoryTable(BluetoothDevice device);
     }
 
     /**
      * 回调：与数据库进行交互
      */
     public interface OnSqlIOCallBack {
-        public void onSendHeartToDB(int avgHeart, int maxHeart, int minHeart);
-        public void onSendStepToDB(int countStep);
-        public void onSendWeightToDB(double countWeight);
+        void onSendHeartToDB(int avgHeart, int maxHeart, int minHeart);
+        void onSendStepToDB(int countStep);
+        void onSendWeightToDB(double countWeight);
     }
 
 }
