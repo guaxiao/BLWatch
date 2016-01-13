@@ -33,7 +33,7 @@
             android:textColor="#5f666f"
             android:textSize="35sp"
             android:text="@string/step_nil"
-            android:id="@+id/textStep"
+            android:id="@+id/textCircleCenter"
             android:layout_gravity="center_horizontal|top"
             android:layout_marginTop="136dp"
             android:layout_alignParentTop="true"
@@ -45,8 +45,8 @@
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:textColor="#5f666f"
             android:text="0cal"
-            android:id="@+id/textCal"
-            android:layout_below="@+id/textStep"
+            android:id="@+id/textCircleBottom"
+            android:layout_below="@+id/textCircleCenter"
             android:layout_centerHorizontal="true" />
 
         <RelativeLayout
@@ -63,7 +63,7 @@
                 android:textColor="#5f666f"
                 android:textSize="35sp"
                 android:text="@string/heart_nil"
-                android:id="@+id/textHeartCount"
+                android:id="@+id/textFragmentBottom"
                 android:layout_gravity="center_horizontal|top"
                 android:layout_marginBottom="60dp"
                 android:layout_above="@+id/textRecvDeviceName"
@@ -90,6 +90,5 @@
                 android:layout_alignParentStart="true"/>
 
         </RelativeLayout>
-
     </RelativeLayout>
 </FrameLayout>
