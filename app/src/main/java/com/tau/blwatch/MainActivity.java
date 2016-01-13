@@ -33,6 +33,9 @@ public class MainActivity extends AppCompatActivity
                 WalkFragment.OnSqlIOCallBack,
                 DeviceListFragment.OnChooseLeDeviceCallBack{
 
+    private static final String	TAG_MIBAND		= "==[mibandtest]==";
+
+
     //fragment的本地对象
     private static WalkFragment mWalkFragment = new WalkFragment();
     private static HistoryFragment mHistoryFragment = new HistoryFragment();
@@ -71,7 +74,6 @@ public class MainActivity extends AppCompatActivity
         mHistoryDBHelper = new HistoryDBHelper(this);
         //在此HistoryDBHelper的源码中自动调用了openOrCreateDatabase，无需担心数据库未建立的情况
         mHistoryDatabase = mHistoryDBHelper.getWritableDatabase();
-
 
         //定义全局View
         setContentView(R.layout.activity_main);
@@ -112,13 +114,33 @@ public class MainActivity extends AppCompatActivity
         super.onDestroy();
         try{
             unregisterReceiver(mWalkFragment.mGattUpdateReceiver);  //注销广播监听
-            unbindService(mWalkFragment.mServiceConnection); //注销服务
-            TiZhiGattAttributesHelper.terminate();  //注销体脂秤蓝牙连接服务
         }catch (IllegalArgumentException e){
-            Log.d("deviceChange","mGattUpdateReceiver | mServiceConnection | TiZhiGattAttributesHelper is NULL");
-        }catch (NullPointerException e){
+            Log.d("deviceChange","mGattUpdateReceiver is NULL");
+        }
+
+        try{
+            unbindService(mWalkFragment.mServiceConnection); //注销服务
+        }catch (IllegalArgumentException e){
+            Log.d("deviceChange","mServiceConnection is NULL");
+        }
+
+        try{
+            TiZhiGattAttributesHelper.terminate();  //注销体脂秤蓝牙连接服务
+        }catch (IllegalArgumentException | NullPointerException e){
             Log.d("deviceChange","TiZhiGattAttributesHelper is NULL");
         }
+
+//        try{
+//            MiBandConnectHelper.disableRealtimeStepsNotify(); //注销小米手环步数监听
+//        }catch (NullPointerException | MiBandNotConnectException e){
+//            Log.d("deviceChange","MiBandConnectHelper is NULL or MiBand not connected");
+//        }
+//
+//        try{
+//            MiBandConnectHelper.disableSensorDataNotify(); //注销小米手环重力感应监听
+//        }catch (NullPointerException | MiBandNotConnectException e){
+//            Log.d("deviceChange","MiBandConnectHelper is NULL or MiBand not connected");
+//        }
     }
 
     @Override
@@ -290,7 +312,7 @@ public class MainActivity extends AppCompatActivity
      */
     public void onSendHeartToDB(int avgHeart, int maxHeart, int minHeart){
         long writeTime = new Date().getTime();
-        mHistoryDBHelper.insertHeart(writeTime, mDevice.getAddress(), avgHeart, maxHeart ,minHeart);
+        mHistoryDBHelper.insertHeart(writeTime, mDevice.getAddress(), avgHeart, maxHeart, minHeart);
     }
 
     /**
