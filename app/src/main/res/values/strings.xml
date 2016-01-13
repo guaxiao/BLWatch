@@ -33,5 +33,8 @@
     <string name="weight_counting_info">体重</string>
     <string name="weight_counting">测量中</string>
 
+    <string name="mi_band_info">小米手环</string>
+
+    <string name="wait_mi_band">佩戴好手环后轻敲手环完成连接</string>
 
 </resources>
