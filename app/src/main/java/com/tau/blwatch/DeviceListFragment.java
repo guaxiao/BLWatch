@@ -36,12 +36,11 @@ public class DeviceListFragment extends ListFragment {
 
     private static final String ARG_USERINFO = "userInfo";
     private static final String ARG_LASTFRAGMENT = "lastFragment";
-    private static final String ARG_DEVICE_SER = "deviceSerializable";
+    private static final String ARG_DEVICE = "bluetoothDevice";
 
     private String mUserInfo;
     private String mLastFragment;
-    private SerializableDevice mSerializableDevice;
-    private BluetoothDevice mDevice;
+    private static BluetoothDevice mBluetoothDevice;
 
     private OnChooseLeDeviceCallBack mChooseLeDeviceCallBack;
 
@@ -112,7 +111,7 @@ public class DeviceListFragment extends ListFragment {
         DeviceListFragment fragment = new DeviceListFragment();
         Bundle args = new Bundle();
         args.putString(ARG_USERINFO, userInfo);
-        args.putSerializable(ARG_DEVICE_SER, new SerializableDevice().setDevice(device));
+        args.putParcelable(ARG_DEVICE, device);
         args.putString(ARG_LASTFRAGMENT, lastFragment);
         fragment.setArguments(args);
         return fragment;
@@ -142,11 +141,7 @@ public class DeviceListFragment extends ListFragment {
 
         if (getArguments() != null) {
             mUserInfo = getArguments().getString(ARG_USERINFO);
-            mSerializableDevice = (SerializableDevice)getArguments().getSerializable(ARG_DEVICE_SER);
-            if(mSerializableDevice != null)
-                mDevice = mSerializableDevice.getDevice();
-            else
-                mDevice = null;
+            mBluetoothDevice = getArguments().getParcelable(ARG_DEVICE);
             mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
         }
 
@@ -247,8 +242,10 @@ public class DeviceListFragment extends ListFragment {
         Log.i("onListItemClick","position");
         if (null != mChooseLeDeviceCallBack) {
             final BluetoothDevice device = mAdapter.getDevice(position);
-            if (device == null) return;
-            mChooseLeDeviceCallBack.onChooseLeDevice(device);
+            if (device == null)
+                return;
+            else
+                mChooseLeDeviceCallBack.onChooseLeDevice(device);
         }
     }
 

@@ -44,12 +44,11 @@ import lecho.lib.hellocharts.view.ComboLineColumnChartView;
 public class HistoryFragment extends Fragment {
     private static final String ARG_USERINFO = "userInfo";
     private static final String ARG_LASTFRAGMENT = "lastFragment";
-    private static final String ARG_DEVICE_SER = "deviceSerializable";
+    private static final String ARG_DEVICE = "bluetoothDevice";
 
     private String mUserInfo;
     private String mLastFragment;
-    private SerializableDevice mSerializableDevice;
-    private BluetoothDevice mDevice;
+    private static BluetoothDevice mBluetoothDevice;
 
     private OnJumpToOtherFragmentCallBack mJumpCallBack;
     private OnSelectDataBaseCallBack mSelectDBCallBack;
@@ -110,7 +109,7 @@ public class HistoryFragment extends Fragment {
         HistoryFragment fragment = new HistoryFragment();
         Bundle args = new Bundle();
         args.putString(ARG_USERINFO, userInfo);
-        args.putSerializable(ARG_DEVICE_SER, new SerializableDevice().setDevice(device));
+        args.putParcelable(ARG_DEVICE, device);
         args.putString(ARG_LASTFRAGMENT, lastFragment);
         fragment.setArguments(args);
         return fragment;
@@ -143,11 +142,7 @@ public class HistoryFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             mUserInfo = getArguments().getString(ARG_USERINFO);
-            mSerializableDevice = (SerializableDevice)getArguments().getSerializable(ARG_DEVICE_SER);
-            if(mSerializableDevice != null)
-                mDevice = mSerializableDevice.getDevice();
-            else
-                mDevice = null;
+            mBluetoothDevice = getArguments().getParcelable(ARG_DEVICE);
             mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
         }
 
@@ -168,7 +163,7 @@ public class HistoryFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 //跳转至设备列表界面
-                mJumpCallBack.onJumpToDeviceList(mDevice);
+                mJumpCallBack.onJumpToDeviceList(mBluetoothDevice);
                 Log.i("FragmentWList", "From " + this.getClass().getSimpleName());
             }
         });
