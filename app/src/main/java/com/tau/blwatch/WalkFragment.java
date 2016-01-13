@@ -1,6 +1,7 @@
 package com.tau.blwatch;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
@@ -11,7 +12,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
 import android.support.design.widget.FloatingActionButton;;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -24,22 +28,30 @@ import android.widget.Toast;
 import com.ns.nsbletizhilib.ITiZhiBleGattCallbackHelper;
 import com.ns.nsbletizhilib.TiZhiData;
 import com.ns.nsbletizhilib.TiZhiGattAttributesHelper;
+import com.zhaoxiaodan.miband.ActionCallback;
+import com.zhaoxiaodan.miband.MiBandConnectHelper;
+import com.zhaoxiaodan.miband.listeners.NotifyListener;
+import com.zhaoxiaodan.miband.listeners.RealtimeStepsNotifyListener;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import dmax.dialog.SpotsDialog;
+
 public class WalkFragment extends Fragment {
+    private static final String	TAG_MIBAND		= "==[mibandtest]==";
+
     private static final String ARG_USERINFO = "userInfo";
     private static final String ARG_LASTFRAGMENT = "lastFragment";
-    private static final String ARG_DEVICE_SER = "deviceSerializable";
+    private static final String ARG_DEVICE = "bluetoothDevice";
 
     private String mUserInfo;
     private String mLastFragment;
-    private SerializableDevice mSerializableDevice;
-    private BluetoothDevice mDevice;
+    private static BluetoothDevice mBluetoothDevice;
 
     private static final String DEVICE_PTWATCH = "PTWATCH";
     private static final String DEVICE_NSW04 = "NS-W04";
+    private static final String DEVICE_MI1S = "MI1S";
 
     private OnJumpToOtherFragmentCallBack mJumpCallBack;
     private OnSqlIOCallBack mSqlIOCallBack;
@@ -49,6 +61,7 @@ public class WalkFragment extends Fragment {
     private BluetoothLeService mBluetoothLeService;
     private BluetoothGattCharacteristic mNotifyCharacteristic;
     private boolean mConnected = false;//设备链接状态，默认未连接
+
     /**
      * 停止同步
      */
@@ -65,10 +78,37 @@ public class WalkFragment extends Fragment {
 
 //    private FrameLayout mBaseLayout;
     private FloatingActionButton mFab_bottom, mFab_top, mFab_bottom_stop;
-    private TextView mHeartCount,mWalkStep;
-    private TextView deRecvDeviceName, deRecvDeviceAdd;
+    private static TextView mCircleCenterTextView, mCircleBottomTextView, mFragmentBottomTextView;
+    private static TextView deRecvDeviceName, deRecvDeviceAdd;
 
-    private int countStep;
+    private static AlertDialog mChartLoadingDialog;
+
+    private static final int Message_Circle_Center = 1;
+    private static final int Message_Circle_Bottom = 2;
+    private static final int Message_Fragment_Bottom = 3;
+
+    static class ViewControlHandler extends Handler{
+        public ViewControlHandler(Looper looper)    {super(looper);}
+
+        @Override
+        public void handleMessage(Message msg) {
+            String text = (String)msg.obj;
+
+            switch (msg.what) {
+                case Message_Circle_Center:
+                    mCircleCenterTextView.setText(text);
+                    break;
+                case Message_Circle_Bottom:
+                    mCircleBottomTextView.setText(text);
+                    break;
+                case Message_Fragment_Bottom:
+                    mFragmentBottomTextView.setText(text);
+                    break;
+            }
+        }
+    }
+
+    private static ViewControlHandler  mViewControlHandler = new ViewControlHandler(Looper.getMainLooper());
 
     // Code to manage Service lifecycle.
     public final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -88,7 +128,7 @@ public class WalkFragment extends Fragment {
             // Automatically connects to the device upon successful start-up
             // initialization.
             // 连接上设备后并且成功初始化
-            mBluetoothLeService.connect(mDevice.getName());
+            mBluetoothLeService.connect(mBluetoothDevice.getName());
         }
 
         @Override
@@ -150,7 +190,7 @@ public class WalkFragment extends Fragment {
         WalkFragment fragment = new WalkFragment();
         Bundle args = new Bundle();
         args.putString(ARG_USERINFO, userInfo);
-        args.putSerializable(ARG_DEVICE_SER, new SerializableDevice().setDevice(device));
+        args.putParcelable(ARG_DEVICE, device);
         args.putString(ARG_LASTFRAGMENT, lastFragment);
         fragment.setArguments(args);
         return fragment;
@@ -182,11 +222,7 @@ public class WalkFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             mUserInfo = getArguments().getString(ARG_USERINFO);
-            mSerializableDevice = (SerializableDevice)getArguments().getSerializable(ARG_DEVICE_SER);
-            if(mSerializableDevice != null)
-                mDevice = mSerializableDevice.getDevice();
-            else
-                mDevice = null;
+            mBluetoothDevice = getArguments().getParcelable(ARG_DEVICE);
             mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
         }
 
@@ -206,10 +242,12 @@ public class WalkFragment extends Fragment {
         //得到容器ViewGroup
 //        mBaseLayout = (FrameLayout) fragmentView.findViewById(R.id.baseLayout_walk);
 
-        //定义步数计数器
-        mWalkStep = (TextView) fragmentView.findViewById(R.id.textStep);
-        //定义心跳计数器
-        mHeartCount = (TextView) fragmentView.findViewById(R.id.textHeartCount);
+        //定义圆心TextView
+        mCircleCenterTextView = (TextView) fragmentView.findViewById(R.id.textCircleCenter);
+        //定义圆周底部TextView
+        mCircleBottomTextView = (TextView) fragmentView.findViewById(R.id.textCircleBottom);
+        //定义页面底部TextView
+        mFragmentBottomTextView = (TextView) fragmentView.findViewById(R.id.textFragmentBottom);
 
         //定义浮动按钮
         mFab_bottom = (FloatingActionButton) getActivity().findViewById(R.id.fab_bottom);
@@ -220,13 +258,13 @@ public class WalkFragment extends Fragment {
         mFab_bottom.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(mDevice == null){
+                if(mBluetoothDevice == null){
                     //跳转至设备列表界面
                     mJumpCallBack.onJumpToDeviceList(null);
                     Log.d("FragmentWList","From " + this.getClass().getSimpleName());
                 }else{
-                    if (mDevice.getName() != null)
-                        switch (mDevice.getName()){
+                    if (mBluetoothDevice.getName() != null)
+                        switch (mBluetoothDevice.getName()){
                             case DEVICE_NSW04:
                                 //重新与体重秤连接
                                 mFab_bottom_stop.show();
@@ -238,6 +276,9 @@ public class WalkFragment extends Fragment {
                                 Toast.makeText(getActivity(), "Data Uploading", Toast.LENGTH_SHORT).show();
                                 Log.d("WalkFragment", "updateData");
                                 mFab_bottom_stop.show();
+                                break;
+                            case DEVICE_MI1S:
+                                // TODO: 添加对小米手环的重新连接方法
                                 break;
                         }
                 }
@@ -251,28 +292,40 @@ public class WalkFragment extends Fragment {
             public void onClick(View v) {
                 Toast.makeText(getActivity(), "Disconnect Success ", Toast.LENGTH_SHORT).show();
 
-                if(mDevice == null){
+                if(mBluetoothDevice == null){
                     //跳转至设备列表界面
                     mJumpCallBack.onJumpToDeviceList(null);
                     Log.d("FragmentWList","From " + this.getClass().getSimpleName());
                 }else{
-                    switch (mDevice.getName()){
+                    switch (mBluetoothDevice.getName()){
                         case DEVICE_NSW04:
                             break;
                         case DEVICE_PTWATCH:
                             //命令设备停止上传数据
                             BLEUploadData(countShutDown);
                             break;
+                        case DEVICE_MI1S:
+                            // TODO: 添加对小米手环的断开连接方法
+                            // WARNING: 以下方法对断开连接后重新搜索但找不到手环的问题没有效果
+                            if (MiBandConnectHelper.getIsConnected()) {
+                                MiBandConnectHelper.disableRealtimeStepsNotify();
+//                                MiBandConnectHelper.disableSensorDataNotify();
+                            } else{
+                                //跳转至设备列表界面
+                                mJumpCallBack.onJumpToDeviceList(null);
+                                Log.d("FragmentWList","From " + this.getClass().getSimpleName());
+                            }
+                            break;
                     }
                     //跳转至历史统计界面
-                    mJumpCallBack.onJumpToHistoryTable(mDevice);
+                    mJumpCallBack.onJumpToHistoryTable(mBluetoothDevice);
                 }
             }
         });
 
 
          //从设备列表选择了设备跳转而来，则进行自动连接
-        if(mDevice != null && mLastFragment != null
+        if(mBluetoothDevice != null && mLastFragment != null
                 && mLastFragment.equals(MainActivity.NAME_DeviceListFragment_JUMP)){
             isAtomConnect = true;
             mFab_bottom_stop.show();
@@ -285,51 +338,78 @@ public class WalkFragment extends Fragment {
         deRecvDeviceName = (TextView) fragmentView.findViewById(R.id.textRecvDeviceName);
         deRecvDeviceAdd = (TextView) fragmentView.findViewById(R.id.textRecvDeviceAdd);
 
-        if(mDevice == null){
+        if(mBluetoothDevice == null){
             Log.d("WalkFragment","mDevice==null");
             deRecvDeviceName.setText("");
             deRecvDeviceAdd.setText("");
         }else{
-            if(mDevice.getName() == null)
+            if(mBluetoothDevice.getName() == null)
                 deRecvDeviceName.setText(R.string.unknown_device);
             else
-                deRecvDeviceName.setText(mDevice.getName());
+                deRecvDeviceName.setText(mBluetoothDevice.getName());
 
-            if(mDevice.getAddress() == null)
+            if(mBluetoothDevice.getAddress() == null)
                 deRecvDeviceAdd.setText(R.string.unknown_device_address);
             else
-                deRecvDeviceAdd.setText(mDevice.getAddress());
+                deRecvDeviceAdd.setText(mBluetoothDevice.getAddress());
         }
 
         //根据连接设备的类型不同启动相应的蓝牙连接协议
-        if(mDevice != null){
-            switch (mDevice.getName()){
+        if(mBluetoothDevice != null){
+            switch (mBluetoothDevice.getName()){
                 case DEVICE_PTWATCH:
                     Log.d("onCreate", DEVICE_PTWATCH);
+                    //第一次与设备通讯前，更新UI至等待状态
+                    if(isAtomConnect){
+                        mCircleCenterTextView.setText(R.string.step_counting);
+                        mFragmentBottomTextView.setText(R.string.heart_calculating);
+                    }
                     //启动手表的蓝牙服务
                     Intent gattServiceIntent = new Intent(getActivity(), BluetoothLeService.class);
                     getActivity().bindService(gattServiceIntent, mServiceConnection, Activity.BIND_AUTO_CREATE);
                     Log.d("mGattCharacteristics", mGattCharacteristics.size() + "");
-                    //第一次与设备通讯前，更新UI至等待状态
-                    if(isAtomConnect){
-                        mWalkStep.setText(R.string.step_counting);
-                        mHeartCount.setText(R.string.heart_calculating);
-                    }
                     break;
 
                 case DEVICE_NSW04:
                     Log.d("onCreate", DEVICE_NSW04);
+                    //第一次与设备通讯前，更新UI至等待状态
+                    if(isAtomConnect){
+                        mCircleCenterTextView.setText(R.string.weight_counting);
+                        mFragmentBottomTextView.setText(R.string.weight_counting_info);
+                    }
                     // 初始化蓝牙连接服务助手
                     TiZhiGattAttributesHelper.initialize(getActivity());
                     //启动蓝牙连接线程
                     TZGattThread mTZGattThread = new TZGattThread();
                     mTZGattThread.start();
+                    break;
+
+                case DEVICE_MI1S:
+                    Log.d("onCreate", DEVICE_MI1S);
                     //第一次与设备通讯前，更新UI至等待状态
                     if(isAtomConnect){
-                        mWalkStep.setText(R.string.weight_counting);
-                        mHeartCount.setText(R.string.weight_counting_info);
+                        mCircleCenterTextView.setText(R.string.step_counting);
+                        mFragmentBottomTextView.setText(R.string.mi_band_info);
                     }
-                    break;
+                    //设置dialog提示信息
+                    mChartLoadingDialog = new SpotsDialog(getActivity(),getString(R.string.wait_mi_band));
+                    mChartLoadingDialog.show();
+                    // 初始化小米手环蓝牙连接助手
+                    MiBandConnectHelper.initialize(getActivity());
+                    // 连接小米手环
+                    MiBandConnectHelper.connect(mBluetoothDevice, new ActionCallback() {
+                        @Override
+                        public void onSuccess(Object data) {
+                            Log.d(TAG_MIBAND, "connect success");
+                            setMiBandListeners();
+                            mChartLoadingDialog.dismiss();
+                        }
+
+                        @Override
+                        public void onFail(int errorCode, String msg) {
+                            Log.d(TAG_MIBAND, "connect fail, code:" + errorCode + ",mgs:" + msg);
+                        }
+                    });
             }
         }
         return fragmentView;
@@ -344,11 +424,11 @@ public class WalkFragment extends Fragment {
         mFab_top.hide();
         mFab_bottom_stop.hide();
 
-        if(mDevice != null && mDevice.getName().equals(DEVICE_PTWATCH)){
+        if(mBluetoothDevice != null && mBluetoothDevice.getName().equals(DEVICE_PTWATCH)){
             //启动广播接收器
             getActivity().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
             if (mBluetoothLeService != null) {
-                final boolean result = mBluetoothLeService.connect(mDevice.getAddress());
+                final boolean result = mBluetoothLeService.connect(mBluetoothDevice.getAddress());
                 Log.d("WalkFragment", "Connect request result=" + result);
             }
         }
@@ -376,9 +456,9 @@ public class WalkFragment extends Fragment {
 
             if (flag.equals("H")) { //心跳报文
                 if(data.equals("0"))
-                    mHeartCount.setText(R.string.heart_calculating);
+                    mFragmentBottomTextView.setText(R.string.heart_calculating);
                 else {
-                    mHeartCount.setText(data);  //设置UI
+                    mFragmentBottomTextView.setText(data);  //设置UI
                     try{
                         mSqlIOCallBack.onSendHeartToDB(
                                 Integer.parseInt(data),simulateMaxHeart,simulateMinHeart); //通过回调经由activity上传数据库
@@ -390,9 +470,9 @@ public class WalkFragment extends Fragment {
 
             } else {    //步数报文
                 if(data.equals("0"))
-                    mWalkStep.setText(R.string.step_counting);
+                    mCircleCenterTextView.setText(R.string.step_counting);
                 else{
-                    mWalkStep.setText(data);    //设置UI
+                    mCircleCenterTextView.setText(data);    //设置UI
                     try{
                         mSqlIOCallBack.onSendStepToDB(Integer.parseInt(data)); //通过回调经由activity上传数据库
                     }catch (java.lang.NumberFormatException e){
@@ -531,12 +611,12 @@ public class WalkFragment extends Fragment {
 //
 //    }
 
-    class TZGattThread extends Thread{
+    class TZGattThread extends Thread {
         @Override
-        public void run(){
+        public void run() {
             boolean isInitializing = true;
-            while(isInitializing){
-                try{
+            while (isInitializing) {
+                try {
                     // 连接蓝牙
                     // connBleTiZhi(当前的Activity，可为null, 连接超时时间, 蓝牙回调)
                     TiZhiGattAttributesHelper.getInstance().connBleTiZhi(null, 60 * 1000,
@@ -546,11 +626,11 @@ public class WalkFragment extends Fragment {
                                  */
                                 @Override
                                 public void onTiZhiDataReceived(final TiZhiData data) {
-                                    final float formattedWeight = (int)(data.getUserWeight() * 100) / 100F;
+                                    final float formattedWeight = (int) (data.getUserWeight() * 100) / 100F;
                                     getActivity().runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
-                                            mWalkStep.setText(Float.toString(formattedWeight));
+                                            mCircleCenterTextView.setText(Float.toString(formattedWeight));
                                         }
                                     });
 
@@ -568,7 +648,7 @@ public class WalkFragment extends Fragment {
                                 }
                             });
                     isInitializing = false;
-                }catch (java.lang.NullPointerException NPE){
+                } catch (java.lang.NullPointerException NPE) {
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException InterE) {
@@ -578,6 +658,75 @@ public class WalkFragment extends Fragment {
             }
         }
     }
+
+    private static void setMiBandListeners(){
+//        MiBandConnectHelper.pair(new ActionCallback() {
+//
+//            @Override
+//            public void onSuccess(Object data) {
+                Log.d(TAG_MIBAND, "pair success");
+                // 设置断开监听器, 方便在设备断开的时候进行重连或者别的处理
+        MiBandConnectHelper.setDisconnectedListener(new NotifyListener() {
+                    @Override
+                    public void onNotify(byte[] data) {
+                        Log.d(TAG_MIBAND, "connect break");
+                    }
+                });
+
+//                //获取普通通知, data一般len=1, 值为通知类型, 类型暂未收集
+//                MiBandConnectHelper.setNormalNotifyListener(new NotifyListener() {
+//
+//                    @Override
+//                    public void onNotify(byte[] data) {
+//                        Log.d(TAG_MIBAND, "NormalNotifyListener:" + Arrays.toString(data));
+//                    }
+//                });
+
+                // 获取实时步数通知, 设置好后, 摇晃手环(需要持续摇动10-20下才会触发), 会实时收到当天总步数通知，需要两步:
+                // 1.设置监听器
+
+        MiBandConnectHelper.setRealtimeStepsNotifyListener(new RealtimeStepsNotifyListener() {
+
+                    @Override
+                    public void onNotify(int steps) {
+                        Log.d(TAG_MIBAND, "RealTimeStepsNotifyListener:" + steps);
+                        Message message = new Message();
+                        message.what = Message_Circle_Center;
+                        message.obj = String.valueOf(steps);
+                        mViewControlHandler.sendMessage(message);
+                    }
+                });
+
+                // 2.开启通知
+        MiBandConnectHelper.enableRealtimeStepsNotify();
+
+//                // 获取重力感应器原始数据, 需要两步
+//                // 1. 设置监听器
+//                MiBandConnectHelper.setSensorDataNotifyListener(new NotifyListener() {
+//                    @Override
+//                    public void onNotify(byte[] data) {
+//                        int i = 0;
+//
+//                        int index = (data[i++] & 0xFF) | (data[i++] & 0xFF) << 8;  // 序号
+//                        int d1 = (data[i++] & 0xFF) | (data[i++] & 0xFF) << 8;
+//                        int d2 = (data[i++] & 0xFF) | (data[i++] & 0xFF) << 8;
+//                        int d3 = (data[i++] & 0xFF) | (data[i++] & 0xFF) << 8;
+//
+//                        Log.d(TAG_MIBAND, "SensorDataNotifyListener:" + index + " " + d1 + " " + d2 + " " + d3);
+//                    }
+//                });
+//
+//                // 2. 开启
+//                MiBandConnectHelper.enableSensorDataNotify();
+//            }
+//
+//            @Override
+//            public void onFail(int errorCode, String msg) {
+//                Log.d(TAG_MIBAND, "pair fail");
+//            }
+//        });
+    }
+
     /**
      * 回调：跳转至设备列表界面
      */
@@ -594,5 +743,4 @@ public class WalkFragment extends Fragment {
         void onSendStepToDB(int countStep);
         void onSendWeightToDB(double countWeight);
     }
-
 }
