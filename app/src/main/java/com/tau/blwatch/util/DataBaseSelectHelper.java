@@ -1,4 +1,4 @@
-package com.tau.blwatch;
+package com.tau.blwatch.util;
 
 import android.database.Cursor;
 import android.util.Log;
@@ -9,6 +9,8 @@ import java.util.Date;
 import java.util.HashMap;
 
 public class DataBaseSelectHelper {
+    // TODO: 将mStatisticsCollection的缓存处理也移到本类中，并实现单例化
+
     public final static String ARG_START_TIME = "StartTime:";
     public final static String ARG_TIME_TYPE = ",TimeType:";
     public final static String ARG_FROM = ",From:";
@@ -38,7 +40,7 @@ public class DataBaseSelectHelper {
         onSelect();
     }
 
-    public void onSelect(){
+    public static void onSelect(){
         Log.d("onSelectHeartData", "start");
 
 //        if(!isPart)
