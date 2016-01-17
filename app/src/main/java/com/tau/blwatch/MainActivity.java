@@ -3,6 +3,7 @@ package com.tau.blwatch;
 import android.app.Activity;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.v4.app.FragmentManager;
@@ -19,6 +20,18 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import com.ns.nsbletizhilib.TiZhiGattAttributesHelper;
+import com.tau.blwatch.fragment.DeviceListFragment;
+import com.tau.blwatch.fragment.HistoryFragment;
+import com.tau.blwatch.fragment.LoginFragment;
+import com.tau.blwatch.fragment.MainFragment;
+import com.tau.blwatch.fragment.WalkFragment;
+import com.tau.blwatch.util.DataBaseSelectHelper;
+import com.tau.blwatch.util.HistoryDBHelper;
+import com.tau.blwatch.util.UserEntity;
+import com.tau.blwatch.util.SharePrefUtil;
+import com.tau.blwatch.util.FormKeyHelper;
+
+import org.xutils.x;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -31,7 +44,9 @@ public class MainActivity extends AppCompatActivity
                 HistoryFragment.OnSelectDataBaseCallBack,
                 WalkFragment.OnJumpToOtherFragmentCallBack,
                 WalkFragment.OnSqlIOCallBack,
-                DeviceListFragment.OnChooseLeDeviceCallBack{
+                DeviceListFragment.OnChooseLeDeviceCallBack,
+                MainFragment.OnJumpToOtherFragmentCallBack,
+                LoginFragment.OnJumpToOtherFragmentCallBack {
 
     private static final String	TAG_MIBAND		= "==[mibandtest]==";
 
@@ -41,24 +56,34 @@ public class MainActivity extends AppCompatActivity
     private static HistoryFragment mHistoryFragment = new HistoryFragment();
     private static DeviceListFragment mDeviceListFragment = new DeviceListFragment();
 
+    public static final String NAME_MainFragment_TAB = "MainFragment";
     public static final String NAME_WalkFragment_TAB = "WalkFragment";
     public static final String NAME_HistoryFragment_TAB = "HistoryFragment";
     public static final String NAME_DeviceListFragment_TAB = "DeviceListFragment";
+    public static final String NAME_MainFragment_JUMP = "MainFragmentJump";
+    public static final String NAME_WalkFragment_JUMP = "WalkFragmentJump";
+    public static final String NAME_HistoryFragment_JUMP = "HistoryFragmentJump";
     public static final String NAME_DeviceListFragment_JUMP = "DeviceListFragmentJump";
+    public static final String NAME_DeviceTypeListFragment_JUMP = "DeviceTypeListFragmentJump";
+    public static final String NAME_DeviceHistoryFragment_JUMP = "DeviceHistoryFragmentJump";
 
     //fragment管理器
     private FragmentManager mFragmentManager = getSupportFragmentManager();
 
     //app内的通信信息 <基于fragment工厂模式化>
-    private String mUserInfo;
+    private UserEntity mUserInfo;
     private BluetoothDevice mDevice;
     private String lastFragment = "";
 
     //来自 BluetoothAdapter.ACTION_REQUEST_ENABLE 弹出窗口的activity回退请求码
     private static final int REQUEST_ENABLE_BT = 65537;
 
+    private DrawerLayout mDrawerLayout;
     private HistoryDBHelper mHistoryDBHelper;
+
+    private boolean isMenuLocked = false;
     private SQLiteDatabase mHistoryDatabase;
+    private ActionBarDrawerToggle mActionBarDrawerToggle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +96,11 @@ public class MainActivity extends AppCompatActivity
 //        mHistoryDatabase = openOrCreateDatabase(DATABASE_NAME, Context.MODE_PRIVATE, null);
 //        mHistoryDatabase.close();
 
+        //TODO：全工程xUtil化
+        //初始化xUtils3框架
+        x.Ext.init(getApplication());
+        x.Ext.setDebug(true);
+
         mHistoryDBHelper = new HistoryDBHelper(this);
         //在此HistoryDBHelper的源码中自动调用了openOrCreateDatabase，无需担心数据库未建立的情况
         mHistoryDatabase = mHistoryDBHelper.getWritableDatabase();
@@ -82,7 +112,7 @@ public class MainActivity extends AppCompatActivity
         setSupportActionBar(toolbar);
 
         //侧滑容器布局，将内容填充入DrawerLayout来给侧滑菜单填充内容
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
 
         //将DrawerLayout与ActionBar聚合的功能类
         /*
@@ -90,23 +120,47 @@ public class MainActivity extends AppCompatActivity
          onConfigurationChanged
          onOptionsItemSelected [ok]
          */
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.setDrawerListener(toggle);
-        toggle.syncState();
+        mActionBarDrawerToggle = new ActionBarDrawerToggle(
+                this, mDrawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        mDrawerLayout.setDrawerListener(mActionBarDrawerToggle);
+        mActionBarDrawerToggle.syncState();
 
         //填充进DrawerLayout，用作导航菜单的框架
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
         //初始化fragment
-        mFragmentManager.beginTransaction()
-                .replace(R.id.mainFrame, WalkFragment
+//        mFragmentManager.beginTransaction()
+//                .replace(R.id.mainFrame, WalkFragment
+//                        .newInstance(mUserInfo, mDevice, lastFragment))
+//                .commit();
+//        //设置初始化actionBar标题
+//        setTitle(R.string.device_null);
+
+        if(SharePrefUtil.getBoolean(this, FormKeyHelper.is_login, false)){ //用户上次已登录
+            //跳转到主页
+            mUserInfo.setUserID(SharePrefUtil.getString(this, FormKeyHelper.user_id, null));
+            mUserInfo.setUserName(SharePrefUtil.getString(this, FormKeyHelper.user_name, null));
+            mUserInfo.setUserImgPath(SharePrefUtil.getString(this, FormKeyHelper.user_imageUrl, null));
+
+            mFragmentManager.beginTransaction()
+                .replace(R.id.mainFrame, MainFragment
                         .newInstance(mUserInfo, mDevice, lastFragment))
                 .commit();
         //设置初始化actionBar标题
-        setTitle(R.string.device_null);
+            setTitle(R.string.nav_main_title);
+        }else{  //用户上次未登录
+            //锁定侧滑菜单与主菜单
+            lockMenus();
 
+            //跳转到登录页面
+            mFragmentManager.beginTransaction()
+                    .replace(R.id.mainFrame, LoginFragment
+                            .newInstance(mUserInfo, mDevice, lastFragment))
+                    .commit();
+            //设置初始化actionBar标题
+            setTitle(R.string.nav_login_title);
+        }
     }
 
     @Override
@@ -143,6 +197,7 @@ public class MainActivity extends AppCompatActivity
 //        }
     }
 
+    //TODO：加入Fragment回退栈管理
     @Override
     public void onBackPressed() {
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -167,6 +222,11 @@ public class MainActivity extends AppCompatActivity
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
+        //TODO：寻找更好的屏蔽菜单方法
+        //当菜单被锁定时，屏蔽所有的菜单监听
+        if(isMenuLocked)
+            id = -1;
+
         //菜单栏的监听 --在此添加菜单项目的事件--
         if (id == R.id.action_settings) {   //设置界面
             return true;
@@ -177,12 +237,26 @@ public class MainActivity extends AppCompatActivity
             mHistoryDBHelper.simulateData();
             Log.d("simData","click");
             return true;
+        }else if(id == R.id.action_logout){ //注销账户
+            if (!SharePrefUtil.getBoolean(this, FormKeyHelper.is_login, false)) //如果缓存数值为未登录或者无此项缓存数值
+                Toast.makeText(this, "未登录", Toast.LENGTH_SHORT).show();
+            else {  //若已登录，则置状态为未登录并回退到登录界面
+                mUserInfo = null;
+                mDevice = null;
+                SharePrefUtil.saveBoolean(this, FormKeyHelper.is_login, false);
+                mFragmentManager.beginTransaction()
+                        .replace(R.id.mainFrame, LoginFragment
+                                .newInstance(mUserInfo,mDevice,lastFragment))
+                        .commit();
+                //设置actionBar标题
+                setTitle(R.string.nav_login_title);
+                lockMenus();
+            }
         }
 
         return super.onOptionsItemSelected(item);
     }
 
-    @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
@@ -237,10 +311,29 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * 回调实现：跳转WATCHLIST界面
+     * 锁定侧滑菜单与主菜单
      */
-    public void onJumpToDeviceList(BluetoothDevice device){
+    private void lockMenus(){
+        isMenuLocked = true;
+        mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
+        mActionBarDrawerToggle.setDrawerIndicatorEnabled(false);
+    }
+
+    /**
+     * 将侧滑菜单与主菜单解锁
+     */
+    private void unlockMenus(){
+        isMenuLocked = false;
+        mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED);
+        mActionBarDrawerToggle.setDrawerIndicatorEnabled(true);
+    }
+
+    /**
+     * 回调实现：跳转DeviceList界面
+     */
+    public void onJumpToDeviceList(BluetoothDevice device, UserEntity userInfo){
         mDevice = device;
+        mUserInfo = userInfo;
         mFragmentManager.beginTransaction()
                 .replace(R.id.mainFrame, DeviceListFragment
                         .newInstance(mUserInfo, mDevice, lastFragment))
@@ -249,14 +342,49 @@ public class MainActivity extends AppCompatActivity
         setTitle(R.string.nav_watch_list_title);
     }
 
-    public void onJumpToHistoryTable(BluetoothDevice device){
+    /**
+     * 回调实现：跳转History界面
+     */
+    public void onJumpToHistoryTable(BluetoothDevice device, UserEntity userInfo){
         mDevice = device;
+        mUserInfo = userInfo;
         mFragmentManager.beginTransaction()
                 .replace(R.id.mainFrame, HistoryFragment
                         .newInstance(mUserInfo, mDevice, lastFragment))
                 .commit();
         //设置actionBar标题
         setTitle(R.string.nav_history_title);
+    }
+
+    /**
+     * 回调实现：跳转Main界面
+     */
+    public void onJumpToMainFragment(BluetoothDevice device, UserEntity userInfo){
+        mDevice = device;
+        mUserInfo = userInfo;
+
+        unlockMenus();
+
+        mFragmentManager.beginTransaction()
+                .replace(R.id.mainFrame, MainFragment
+                .newInstance(mUserInfo,mDevice,lastFragment))
+                .commit();
+        //设置actionBar标题
+        setTitle(R.string.nav_main_title);
+    }
+
+    /**
+     * 回调实现：跳转DeviceTypeList界面
+     */
+    public void onJumpToDeviceTypeList(BluetoothDevice device, UserEntity userInfo){
+        Toast.makeText(this,"JumpToDeviceTypeList",Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * 回调实现：跳转DeviceHistory界面
+     */
+    public void onJumpToDeviceHistory(BluetoothDevice device, UserEntity userInfo){
+        Toast.makeText(this,"JumpToDeviceHistory",Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -281,7 +409,7 @@ public class MainActivity extends AppCompatActivity
      * 回调实现：选择LE设备，跳转到DEVICE_LIST
      * @param device LE设备
      */
-    public void onChooseLeDevice(BluetoothDevice device){
+    public void onChooseLeDevice(BluetoothDevice device, UserEntity userInfo){
         if(device != null && mDevice != null && !device.equals(mDevice)){
             //若选择了非当前设备
             try{
@@ -295,6 +423,7 @@ public class MainActivity extends AppCompatActivity
             }
         }
         mDevice = device;
+        mUserInfo = userInfo;
 
         mFragmentManager.beginTransaction()
                 .replace(R.id.mainFrame, WalkFragment
