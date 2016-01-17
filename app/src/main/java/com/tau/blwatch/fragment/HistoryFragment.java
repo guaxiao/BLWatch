@@ -1,4 +1,4 @@
-package com.tau.blwatch;
+package com.tau.blwatch.fragment;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -17,9 +17,15 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import com.tau.blwatch.R;
+import com.tau.blwatch.ui.LineRecyclerAdapter;
+import com.tau.blwatch.util.DataBaseSelectHelper;
+import com.tau.blwatch.util.HistoryDBHelper;
+import com.tau.blwatch.util.TimeBlockEntity;
+import com.tau.blwatch.util.TimeHelper;
+import com.tau.blwatch.util.UserEntity;
+
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +52,7 @@ public class HistoryFragment extends Fragment {
     private static final String ARG_LASTFRAGMENT = "lastFragment";
     private static final String ARG_DEVICE = "bluetoothDevice";
 
-    private String mUserInfo;
+    private UserEntity mUserInfo;
     private String mLastFragment;
     private static BluetoothDevice mBluetoothDevice;
 
@@ -74,22 +80,6 @@ public class HistoryFragment extends Fragment {
     private String[] mTypeDataList = {"    步数    ","    心率    ","    体重    ","    综合    "};
     private LineRecyclerAdapter mTimeRecyclerAdapter,mTypeRecyclerAdapter;
 
-    public final static String CHART_TIME_SUM = "sunTimeChart";
-    public final static String CHART_TIME_YEAR = "yearTimeChart";
-    public final static String CHART_TIME_QUARTER = "quarterTimeChart";
-    public final static String CHART_TIME_MONTH = "monthTimeChart";
-    public final static String CHART_TIME_WEEK = "weekTimeChart";
-    public final static String CHART_TIME_DAY = "dayTimeChart";
-
-    public final static String CHART_TYPE_SUM = "sunTypeChart";
-    public final static String CHART_TYPE_STEP = "stepTypeChart";
-    public final static String CHART_TYPE_HEART = "heartTypeChart";
-    public final static String CHART_TYPE_WEIGHT = "weightTypeChart";
-
-    public final static int CHART_COLOR_STEP = 0;
-    public final static int CHART_COLOR_HEART = 1;
-    public final static int CHART_COLOR_WEIGHT = 2;
-
     private String mTagOfChartTime = null;
     private String mTagOfChartType = null;
 
@@ -104,11 +94,10 @@ public class HistoryFragment extends Fragment {
      * @param lastFragment 跳转源页面.
      * @return A new instance of fragment WalkFragment.
      */
-    // TODO: Rename and change types and number of parameters
-    public static HistoryFragment newInstance(String userInfo, BluetoothDevice device, String lastFragment) {
+    public static HistoryFragment newInstance(UserEntity userInfo, BluetoothDevice device, String lastFragment) {
         HistoryFragment fragment = new HistoryFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_USERINFO, userInfo);
+        args.putParcelable(ARG_USERINFO, userInfo);
         args.putParcelable(ARG_DEVICE, device);
         args.putString(ARG_LASTFRAGMENT, lastFragment);
         fragment.setArguments(args);
@@ -141,7 +130,7 @@ public class HistoryFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
-            mUserInfo = getArguments().getString(ARG_USERINFO);
+            mUserInfo = getArguments().getParcelable(ARG_USERINFO);
             mBluetoothDevice = getArguments().getParcelable(ARG_DEVICE);
             mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
         }
@@ -163,7 +152,7 @@ public class HistoryFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 //跳转至设备列表界面
-                mJumpCallBack.onJumpToDeviceList(mBluetoothDevice);
+                mJumpCallBack.onJumpToDeviceList(mBluetoothDevice, mUserInfo);
                 Log.i("FragmentWList", "From " + this.getClass().getSimpleName());
             }
         });
@@ -171,8 +160,8 @@ public class HistoryFragment extends Fragment {
         //初始化图表控件
         chart = (ComboLineColumnChartView) fragmentView.findViewById(R.id.chart);
         chart.setOnValueTouchListener(new ValueTouchListener());
-        mTagOfChartType = CHART_TYPE_STEP;
-        mTagOfChartTime = CHART_TIME_DAY;
+        mTagOfChartType = TimeBlockEntity.CHART_TYPE_STEP;
+        mTagOfChartTime = TimeBlockEntity.CHART_TIME_DAY;
 
         //绘制图表
         generateChartThread(mTagOfChartTime, mTagOfChartType);
@@ -191,27 +180,27 @@ public class HistoryFragment extends Fragment {
             public void onItemClick(View view, int position) {
                 switch (position) {
                     case 0:
-                        mTagOfChartTime = CHART_TIME_DAY;
+                        mTagOfChartTime = TimeBlockEntity.CHART_TIME_DAY;
                         generateChartThread(mTagOfChartTime, mTagOfChartType);
                         mTimeRecyclerAdapter.setSelectItem(0);
                         break;
                     case 1:
-                        mTagOfChartTime = CHART_TIME_WEEK;
+                        mTagOfChartTime = TimeBlockEntity.CHART_TIME_WEEK;
                         generateChartThread(mTagOfChartTime, mTagOfChartType);
                         mTimeRecyclerAdapter.setSelectItem(1);
                         break;
                     case 2:
-                        mTagOfChartTime = CHART_TIME_MONTH;
+                        mTagOfChartTime = TimeBlockEntity.CHART_TIME_MONTH;
                         generateChartThread(mTagOfChartTime, mTagOfChartType);
                         mTimeRecyclerAdapter.setSelectItem(2);
                         break;
                     case 3:
-                        mTagOfChartTime = CHART_TIME_QUARTER;
+                        mTagOfChartTime = TimeBlockEntity.CHART_TIME_QUARTER;
                         generateChartThread(mTagOfChartTime, mTagOfChartType);
                         mTimeRecyclerAdapter.setSelectItem(3);
                         break;
                     case 4:
-                        mTagOfChartTime = CHART_TIME_YEAR;
+                        mTagOfChartTime = TimeBlockEntity.CHART_TIME_YEAR;
                         generateChartThread(mTagOfChartTime, mTagOfChartType);
                         mTimeRecyclerAdapter.setSelectItem(4);
                         break;
@@ -243,17 +232,17 @@ public class HistoryFragment extends Fragment {
                         Toast.LENGTH_SHORT).show();
                 switch (position){
                     case 0:
-                        mTagOfChartType = CHART_TYPE_STEP;
+                        mTagOfChartType = TimeBlockEntity.CHART_TYPE_STEP;
                         generateChartThread(mTagOfChartTime, mTagOfChartType);
                         mTypeRecyclerAdapter.setSelectItem(0);
                         break;
                     case 1:
-                        mTagOfChartType = CHART_TYPE_HEART;
+                        mTagOfChartType = TimeBlockEntity.CHART_TYPE_HEART;
                         generateChartThread(mTagOfChartTime, mTagOfChartType);
                         mTypeRecyclerAdapter.setSelectItem(1);
                         break;
                     case 2:
-                        mTagOfChartType = CHART_TYPE_WEIGHT;
+                        mTagOfChartType = TimeBlockEntity.CHART_TYPE_WEIGHT;
                         generateChartThread(mTagOfChartTime, mTagOfChartType);
                         mTypeRecyclerAdapter.setSelectItem(2);
                         break;
@@ -293,17 +282,6 @@ public class HistoryFragment extends Fragment {
 
     //-----------------------------------------helloCharts------------------------------------------
 
-//    private void generateValues() {
-//        mSelectDBCallBack.onSQLTest();
-//        Log.d("onSelectHeartData",mStatisticsCollection.toString());
-//
-//        for (int i = 0; i < maxNumberOfLines; ++i) {
-//            for (int j = 0; j < numberOfPoints; ++j) {
-//                randomNumbersTab[i][j] = (float) Math.random() * 50f + 5;
-//            }
-//        }
-//    }
-
     public class ChatDrawableTask implements Runnable{
         Handler mHandler;
         String mTagOfTime,mTagOfType;
@@ -319,7 +297,7 @@ public class HistoryFragment extends Fragment {
         public void run(){
             generateValues(mTagOfTime, mTagOfType);
 
-            if(mTagOfType.equals(CHART_TYPE_STEP))
+            if(mTagOfType.equals(TimeBlockEntity.CHART_TYPE_STEP))
                 data = new ComboLineColumnChartData(generateColumnData(mTagOfTime,mTagOfType), null);
             else
                 data = new ComboLineColumnChartData(null, generateLineData(mTagOfTime,mTagOfType));
@@ -351,16 +329,16 @@ public class HistoryFragment extends Fragment {
      */
     private void generateValues(String tagOfTime,String tagOfType) {
         HashMap<String,ArrayList<Float>> tempMap;
-        PropOfTimeBlock propOfTimeBlock = getPropOfBlockData(tagOfTime,tagOfType);
-        Log.d("propOfTimeBlock",propOfTimeBlock.toString());
+        TimeBlockEntity timeBlockEntity = new TimeBlockEntity(tagOfTime,tagOfType);
+        Log.d("TimeBlockEntity", timeBlockEntity.toString());
 
         boolean hasCached = false;
         //构建本次构建图表数据时，应当记录入mStatisticsCollection的Key的关键字（即开始时间、时间片数量与时间片类型）
         String selectDataColumnNameKey = DataBaseSelectHelper.createKeyName(
-                propOfTimeBlock.startTime,
-                propOfTimeBlock.numBlock,
-                propOfTimeBlock.typeTimeBlock,
-                propOfTimeBlock.tableName,
+                timeBlockEntity.startTime,
+                timeBlockEntity.numBlock,
+                timeBlockEntity.typeTimeBlock,
+                timeBlockEntity.tableName,
                 false);
 
         for (Map.Entry<String, ArrayList<Float>> entry : mStatisticsCollection.entrySet()) {
@@ -372,10 +350,10 @@ public class HistoryFragment extends Fragment {
         //当构建指令未命中缓存时，再向数据库查询数据
         if(!hasCached){
             tempMap = mSelectDBCallBack.onSelectData(
-                    propOfTimeBlock.startTime,
-                    propOfTimeBlock.numBlock,
-                    propOfTimeBlock.typeTimeBlock,
-                    propOfTimeBlock.tableName);
+                    timeBlockEntity.startTime,
+                    timeBlockEntity.numBlock,
+                    timeBlockEntity.typeTimeBlock,
+                    timeBlockEntity.tableName);
             mStatisticsCollection.putAll(tempMap);
             Log.d("mStatisticsCollection",mStatisticsCollection.toString());
         }
@@ -428,7 +406,7 @@ public class HistoryFragment extends Fragment {
 
         ArrayList<AxisValue> axisXValues;
         switch (tagOfTime){
-            case CHART_TIME_YEAR:
+            case TimeBlockEntity.CHART_TIME_YEAR:
                 isWeightOverMillion = true;
                 isWeightOverTenThousand = true;
                 isWeightOverKilo = true;
@@ -437,7 +415,7 @@ public class HistoryFragment extends Fragment {
                     axisXValues.add(new AxisValue(i).setLabel((i + 1) + ""));
                 axisX = new Axis(axisXValues).setHasLines(true);
                 break;
-            case CHART_TIME_QUARTER:
+            case TimeBlockEntity.CHART_TIME_QUARTER:
                 isWeightOverTenThousand = true;
                 isWeightOverKilo = true;
                 axisXValues = new ArrayList<>();
@@ -445,7 +423,7 @@ public class HistoryFragment extends Fragment {
                     axisXValues.add(new AxisValue(i).setLabel((i + 1) + ""));
                 axisX = new Axis(axisXValues).setHasLines(true);
                 break;
-            case CHART_TIME_MONTH:
+            case TimeBlockEntity.CHART_TIME_MONTH:
                 isWeightOverTenThousand = true;
                 isWeightOverKilo = true;
                 axisXValues = new ArrayList<>();
@@ -453,7 +431,7 @@ public class HistoryFragment extends Fragment {
                     axisXValues.add(new AxisValue(i).setLabel((i + 1) + ""));
                 axisX = new Axis(axisXValues).setHasLines(true);
                 break;
-            case CHART_TIME_WEEK:
+            case TimeBlockEntity.CHART_TIME_WEEK:
                 isWeightOverTenThousand = true;
                 isWeightOverKilo = true;
                 String [] days = {"SUN","MON","TUE","WED","THU","FRI","SAT"};
@@ -462,15 +440,15 @@ public class HistoryFragment extends Fragment {
                     axisXValues.add(new AxisValue(i).setLabel(days[i]));
                 axisX = new Axis(axisXValues).setHasLines(true);
                 break;
-            case CHART_TIME_DAY:
+            case TimeBlockEntity.CHART_TIME_DAY:
                 break;
         }
 
         switch (tagOfType){
-            case CHART_TYPE_HEART:
+            case TimeBlockEntity.CHART_TYPE_HEART:
                 axisY.setName("心率[/min]");
                 break;
-            case CHART_TYPE_STEP:
+            case TimeBlockEntity.CHART_TYPE_STEP:
 //                if(isWeightOverMillion)
 //                    axisY.setFormatter(new MillionValueFormatter());
 ////                    axisY.setFormatter(new MillionValueFormatter().setAppendedText("M".toCharArray()));
@@ -482,7 +460,7 @@ public class HistoryFragment extends Fragment {
                 else
                     axisY.setName("步数");
                 break;
-            case CHART_TYPE_WEIGHT:
+            case TimeBlockEntity.CHART_TYPE_WEIGHT:
                 axisY.setName("体重[kg]");
                 break;
         }
@@ -499,23 +477,23 @@ public class HistoryFragment extends Fragment {
         Log.d("Viewport","vCurrent=" + vCurrent.toString());
 
         switch (tagOfTime){
-            case CHART_TIME_YEAR:
+            case TimeBlockEntity.CHART_TIME_YEAR:
                 vMax.right = TimeHelper.MONTH_OF_YEAR;
                 vCurrent.right = TimeHelper.MONTH_OF_YEAR;
                 break;
-            case CHART_TIME_QUARTER:
+            case TimeBlockEntity.CHART_TIME_QUARTER:
                 vMax.right = TimeHelper.WEEK_PER_QUARTER;
                 vCurrent.right = TimeHelper.WEEK_PER_QUARTER;
                 break;
-            case CHART_TIME_MONTH:
+            case TimeBlockEntity.CHART_TIME_MONTH:
                 vMax.right = TimeHelper.DAY_PER_MONTH;
                 vCurrent.right = TimeHelper.DAY_PER_MONTH / 2;
                 break;
-            case CHART_TIME_WEEK:
+            case TimeBlockEntity.CHART_TIME_WEEK:
                 vMax.right = TimeHelper.DAY_PER_WEEK;
                 vCurrent.right = TimeHelper.DAY_PER_WEEK;
                 break;
-            case CHART_TIME_DAY:
+            case TimeBlockEntity.CHART_TIME_DAY:
                 vMax.right = TimeHelper.HOUR_PER_DAY;
                 vCurrent.right = TimeHelper.HOUR_PER_DAY;
                 break;
@@ -525,10 +503,10 @@ public class HistoryFragment extends Fragment {
         vCurrent.right -= 0.5;
 
         switch (tagOfType){
-            case CHART_TYPE_STEP:
+            case TimeBlockEntity.CHART_TYPE_STEP:
                 break;
-            case CHART_TYPE_HEART:
-            case CHART_TYPE_WEIGHT:
+            case TimeBlockEntity.CHART_TYPE_HEART:
+            case TimeBlockEntity.CHART_TYPE_WEIGHT:
                 vMax.left -= 0.5;
                 vCurrent.left -= 0.5;
                 vMax.bottom = vMax.bottom * 0.96F;
@@ -549,19 +527,19 @@ public class HistoryFragment extends Fragment {
 
     private LineChartData generateLineData(String tagOfTime,String tagOfType) {
         List<Line> lines = new ArrayList<>();
-        PropOfTimeBlock propOfTimeBlock = getPropOfBlockData(tagOfTime, tagOfType);
+        TimeBlockEntity timeBlockEntity = new TimeBlockEntity(tagOfTime, tagOfType);
 
         String selectDataColumnNameKey = DataBaseSelectHelper.createKeyName(
-                propOfTimeBlock.startTime,
-                propOfTimeBlock.numBlock,
-                propOfTimeBlock.typeTimeBlock,
-                propOfTimeBlock.tableName,
+                timeBlockEntity.startTime,
+                timeBlockEntity.numBlock,
+                timeBlockEntity.typeTimeBlock,
+                timeBlockEntity.tableName,
                 false);
         String selectDataTimeBlockNameKey = DataBaseSelectHelper.createKeyName(
-                propOfTimeBlock.startTime,
-                propOfTimeBlock.numBlock,
-                propOfTimeBlock.typeTimeBlock,
-                propOfTimeBlock.tableName,
+                timeBlockEntity.startTime,
+                timeBlockEntity.numBlock,
+                timeBlockEntity.typeTimeBlock,
+                timeBlockEntity.tableName,
                 true,
                 HistoryDBHelper.ARG_TIME_BLOCK);
 
@@ -606,19 +584,19 @@ public class HistoryFragment extends Fragment {
 
     private ColumnChartData generateColumnData(String tagOfTime,String tagOfType) {
 //        List<Column> columns = new ArrayList<Column>();
-        PropOfTimeBlock propOfTimeBlock = getPropOfBlockData(tagOfTime, tagOfType);
+        TimeBlockEntity timeBlockEntity = new TimeBlockEntity(tagOfTime, tagOfType);
 
         String selectDataColumnNameKey = DataBaseSelectHelper.createKeyName(
-                propOfTimeBlock.startTime,
-                propOfTimeBlock.numBlock,
-                propOfTimeBlock.typeTimeBlock,
-                propOfTimeBlock.tableName,
+                timeBlockEntity.startTime,
+                timeBlockEntity.numBlock,
+                timeBlockEntity.typeTimeBlock,
+                timeBlockEntity.tableName,
                 false);
         String selectDataTimeBlockNameKey = DataBaseSelectHelper.createKeyName(
-                propOfTimeBlock.startTime,
-                propOfTimeBlock.numBlock,
-                propOfTimeBlock.typeTimeBlock,
-                propOfTimeBlock.tableName,
+                timeBlockEntity.startTime,
+                timeBlockEntity.numBlock,
+                timeBlockEntity.typeTimeBlock,
+                timeBlockEntity.tableName,
                 true,
                 HistoryDBHelper.ARG_TIME_BLOCK);
 
@@ -633,7 +611,7 @@ public class HistoryFragment extends Fragment {
                 List<SubcolumnValue> values;
 
                 int countOfList = 0;
-                for(int j = 0; j < propOfTimeBlock.numBlock; j++){
+                for(int j = 0; j < timeBlockEntity.numBlock; j++){
                     values = new ArrayList<>();
                     SubcolumnValue subcolumnValue;
                     if(tempTimeList.get(countOfList) == j) {
@@ -676,96 +654,13 @@ public class HistoryFragment extends Fragment {
 
     }
 
-    private class PropOfTimeBlock{
-        public long startTime = 0L;
-        public Calendar calendar;
-        public int numBlock,numChartColor;
-        public String typeTimeBlock,tableName;
-
-        public PropOfTimeBlock(){
-            startTime = new Date().getTime();
-            calendar = Calendar.getInstance();
-            numBlock = 0;
-            numChartColor = 0;
-            typeTimeBlock = null;
-            tableName = null;
-        }
-
-        @Override
-        public String toString(){
-            return "StartTime:" + startTime + ",NumBlock:" + numBlock + ",NumChartColor:" + numChartColor + ",TypeTimeBlock:" + typeTimeBlock +  ",TableName:" +tableName;
-        }
-    }
-
-    private PropOfTimeBlock getPropOfBlockData(String tagOfTime,String tagOfType){
-        PropOfTimeBlock poTimeBlock = new PropOfTimeBlock();
-
-        switch (tagOfTime){
-            case CHART_TIME_YEAR:
-                //设置为十二个月前的第一天
-                poTimeBlock.calendar.add(Calendar.YEAR,-1);
-                poTimeBlock.calendar.set(Calendar.DAY_OF_MONTH, 1);
-                poTimeBlock.numBlock = TimeHelper.MONTH_OF_YEAR;
-                poTimeBlock.typeTimeBlock = HistoryDBHelper.TYPE_BLOCK_MONTH;
-                break;
-            case CHART_TIME_QUARTER:
-                //设置为本周第一天的13*7-1天前
-                poTimeBlock.calendar.set(Calendar.DAY_OF_WEEK, 1);
-                poTimeBlock.calendar.add(Calendar.DATE, - (TimeHelper.WEEK_PER_QUARTER) *  7 + 1);
-                poTimeBlock.numBlock = TimeHelper.WEEK_PER_QUARTER;
-                poTimeBlock.typeTimeBlock = HistoryDBHelper.TYPE_BLOCK_WEEK;
-                break;
-            case CHART_TIME_MONTH:
-                //设置为当月第一天
-                poTimeBlock.calendar.set(Calendar.DAY_OF_MONTH, 1);
-                poTimeBlock.numBlock = TimeHelper.DAY_PER_MONTH;
-                poTimeBlock.typeTimeBlock = HistoryDBHelper.TYPE_BLOCK_DAY;
-                break;
-            case CHART_TIME_WEEK:
-                //设置为当前星期的第一天
-                poTimeBlock.calendar.set(Calendar.DAY_OF_WEEK, 1);
-                poTimeBlock.numBlock = TimeHelper.DAY_PER_WEEK;
-                poTimeBlock.typeTimeBlock = HistoryDBHelper.TYPE_BLOCK_DAY;
-                break;
-            case CHART_TIME_DAY:
-                poTimeBlock.numBlock = TimeHelper.HOUR_PER_DAY;
-                poTimeBlock.typeTimeBlock = HistoryDBHelper.TYPE_BLOCK_HOUR;
-                break;
-        }
-
-        //设置为00:00:00时刻
-        poTimeBlock.calendar.set(Calendar.HOUR_OF_DAY, 0);
-        poTimeBlock.calendar.set(Calendar.MINUTE, 0);
-        poTimeBlock.calendar.set(Calendar.SECOND, 0);
-        poTimeBlock.calendar.set(Calendar.MILLISECOND, 0);
-
-        poTimeBlock.startTime = poTimeBlock.calendar.getTime().getTime();
-
-        switch (tagOfType){
-            case CHART_TYPE_HEART:
-                poTimeBlock.tableName = HistoryDBHelper.HEART_TABLE_NAME;
-                poTimeBlock.numChartColor = CHART_COLOR_HEART;
-                break;
-            case CHART_TYPE_STEP:
-                poTimeBlock.tableName = HistoryDBHelper.STEP_TABLE_NAME;
-                poTimeBlock.numChartColor = CHART_COLOR_STEP;
-                break;
-            case CHART_TYPE_WEIGHT:
-                poTimeBlock.tableName = HistoryDBHelper.WEIGHT_TABLE_NAME;
-                poTimeBlock.numChartColor = CHART_COLOR_WEIGHT;
-                break;
-        }
-        return poTimeBlock;
-    }
-
-
-    //----------------------------------------------------------------------------------------------
+    //-----------------------------------------interface--------------------------------------------
 
     /**
-     * 回调：跳转至设备列表界面
+     * 回调：跳转至其他界面
      */
     public interface OnJumpToOtherFragmentCallBack {
-        void onJumpToDeviceList(BluetoothDevice device);
+        void onJumpToDeviceList(BluetoothDevice device, UserEntity userInfo);
     }
 
     /**
