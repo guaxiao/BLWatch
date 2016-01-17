@@ -1,4 +1,4 @@
-package com.tau.blwatch;
+package com.tau.blwatch.ui;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -8,8 +8,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-
-import javax.crypto.spec.PSource;
 
 /**
  * Created by Administrator on 2015/12/19 0019.
