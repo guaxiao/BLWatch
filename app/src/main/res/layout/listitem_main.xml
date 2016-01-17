@@ -1,0 +1,42 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:focusable="false">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="@dimen/fab_margin">
+
+        <TextView
+            android:id="@+id/message_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="18sp"
+            android:textColor="@color/pureBlack"
+            android:text="title"
+            android:layout_alignParentTop="true"
+            android:layout_toStartOf="@+id/arrowImageView" />
+
+        <TextView
+            android:id="@+id/message_gist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="12dp"
+            android:textColor="@color/miGray"
+            android:text="gist"
+            android:ellipsize = "end"
+            android:layout_below="@+id/message_title"
+            android:layout_alignEnd="@+id/message_title" />
+
+        <ImageView
+            android:src="@drawable/ic_indicator_right_arrow"
+            android:layout_width="10dp"
+            android:layout_height="15dp"
+            android:id="@+id/arrowImageView"
+            android:layout_centerVertical="true"
+            android:layout_alignParentEnd="true" />
+    </RelativeLayout>
+
+</FrameLayout>
