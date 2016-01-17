@@ -2,8 +2,17 @@
 <resources>
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
-    <color name="colorAccent">#FF4081</color>
+    <!--><color name="colorAccent">#FF4081</color><!-->
+    <color name="colorAccent">#00b3a1</color>
     <color name="lightBlue500">#03a9f4</color>
     <color name="lightBlue400">#29b6f6</color>
     <color name="lightBlue300">#4fc3f7</color>
+
+    <color name="pureBlack">#000000</color>
+    <color name="pureWhite">#FFFFFF</color>
+    <color name="miGray">#5f666f</color>
+    <color name="dividerGray">#90909090</color>
+    <color name="sysBlue400">#0094B0</color>
+
+
 </resources>
