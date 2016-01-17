@@ -30,7 +30,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceMedium"
-            android:textColor="#5f666f"
+            android:textColor="@color/miGray"
             android:textSize="35sp"
             android:text="@string/step_nil"
             android:id="@+id/textCircleCenter"
@@ -43,7 +43,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textColor="#5f666f"
+            android:textColor="@color/miGray"
             android:text="0cal"
             android:id="@+id/textCircleBottom"
             android:layout_below="@+id/textCircleCenter"
@@ -60,7 +60,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textColor="#5f666f"
+                android:textColor="@color/miGray"
                 android:textSize="35sp"
                 android:text="@string/heart_nil"
                 android:id="@+id/textFragmentBottom"
@@ -73,7 +73,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:textColor="#5f666f"
+                android:textColor="@color/miGray"
                 android:text="NIL"
                 android:id="@+id/textRecvDeviceAdd"
                 android:layout_alignParentBottom="true"
@@ -83,11 +83,61 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:textColor="#5f666f"
+                android:textColor="@color/miGray"
                 android:text="NIL"
                 android:id="@+id/textRecvDeviceName"
                 android:layout_above="@+id/textRecvDeviceAdd"
                 android:layout_alignParentStart="true"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="@color/miGray"
+                android:text="@string/debug_text_updata"
+                android:id="@+id/debug_updata"
+                android:layout_above="@+id/textFragmentBottom"
+                android:layout_alignParentEnd="true" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="@color/miGray"
+                android:text=""
+                android:id="@+id/debug_minheart_cache"
+                android:layout_alignBottom="@+id/debug_updata"
+                android:layout_alignParentStart="true" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="@color/miGray"
+                android:text=""
+                android:id="@+id/debug_avgheart_cache"
+                android:layout_above="@+id/debug_minheart_cache"
+                android:layout_alignParentStart="true" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="@color/miGray"
+                android:text=""
+                android:id="@+id/debug_maxheart_cache"
+                android:layout_above="@+id/debug_avgheart_cache"
+                android:layout_alignParentStart="true" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="@color/miGray"
+                android:text=""
+                android:id="@+id/debug_step_cache"
+                android:layout_above="@+id/debug_maxheart_cache"
+                android:layout_alignParentStart="true" />
 
         </RelativeLayout>
     </RelativeLayout>
