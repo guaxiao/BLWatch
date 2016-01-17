@@ -1,4 +1,4 @@
-package com.tau.blwatch;
+package com.tau.blwatch.util;
 
 import android.content.ContentValues;
 import android.content.Context;

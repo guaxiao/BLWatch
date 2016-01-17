@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.tau.blwatch;
+package com.tau.blwatch.util;
 
 import java.util.HashMap;
 
