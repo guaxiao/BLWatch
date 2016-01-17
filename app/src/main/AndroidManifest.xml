@@ -31,7 +31,7 @@
         </activity>
 
         <!-- BluetoothLeService服务权限 -->
-        <service android:name=".BluetoothLeService" android:enabled="true"/>
+        <service android:name=".util.BluetoothLeService" android:enabled="true"/>
         <!-- 体脂秤蓝牙服务权限 -->
         <service android:name="com.ns.service.NSBluetoothLeService" />
     </application>
