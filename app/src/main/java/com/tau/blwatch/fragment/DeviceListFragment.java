@@ -1,4 +1,4 @@
-package com.tau.blwatch;
+package com.tau.blwatch.fragment;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -20,6 +20,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.tau.blwatch.R;
+import com.tau.blwatch.util.UserEntity;
+
 import java.util.ArrayList;
 
 /**
@@ -34,11 +37,13 @@ import java.util.ArrayList;
 
 public class DeviceListFragment extends ListFragment {
 
+    private static final String	TAG		= "DeviceListFragment";
+
     private static final String ARG_USERINFO = "userInfo";
     private static final String ARG_LASTFRAGMENT = "lastFragment";
     private static final String ARG_DEVICE = "bluetoothDevice";
 
-    private String mUserInfo;
+    private UserEntity mUserInfo;
     private String mLastFragment;
     private static BluetoothDevice mBluetoothDevice;
 
@@ -107,10 +112,10 @@ public class DeviceListFragment extends ListFragment {
      * @param lastFragment 跳转源页面.
      * @return A new instance of fragment WalkFragment.
      */
-    public static DeviceListFragment newInstance(String userInfo, BluetoothDevice device, String lastFragment) {
+    public static DeviceListFragment newInstance(UserEntity userInfo, BluetoothDevice device, String lastFragment) {
         DeviceListFragment fragment = new DeviceListFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_USERINFO, userInfo);
+        args.putParcelable(ARG_USERINFO, userInfo);
         args.putParcelable(ARG_DEVICE, device);
         args.putString(ARG_LASTFRAGMENT, lastFragment);
         fragment.setArguments(args);
@@ -140,7 +145,7 @@ public class DeviceListFragment extends ListFragment {
         super.onCreate(savedInstanceState);
 
         if (getArguments() != null) {
-            mUserInfo = getArguments().getString(ARG_USERINFO);
+            mUserInfo = getArguments().getParcelable(ARG_USERINFO);
             mBluetoothDevice = getArguments().getParcelable(ARG_DEVICE);
             mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
         }
@@ -245,7 +250,7 @@ public class DeviceListFragment extends ListFragment {
             if (device == null)
                 return;
             else
-                mChooseLeDeviceCallBack.onChooseLeDevice(device);
+                mChooseLeDeviceCallBack.onChooseLeDevice(device, mUserInfo);
         }
     }
 
@@ -260,11 +265,6 @@ public class DeviceListFragment extends ListFragment {
         if (emptyView instanceof TextView) {
             ((TextView) emptyView).setText(emptyText);
         }
-    }
-
-    static class ViewHolder {
-        TextView deviceName;
-        TextView deviceAddress;
     }
 
     /**
@@ -314,6 +314,10 @@ public class DeviceListFragment extends ListFragment {
 //        getActivity().recreate();
     }
 
+    static class ViewHolder {
+        TextView deviceName;
+        TextView deviceAddress;
+    }
 
     //构建设备列表的adapter的内部类
     private class LeDeviceListAdapter extends BaseAdapter {
@@ -321,12 +325,12 @@ public class DeviceListFragment extends ListFragment {
          * 存储获得的蓝牙设备列表
          */
         private ArrayList<BluetoothDevice> mLeDevices;
-        private LayoutInflater mInflator;
+        private LayoutInflater mInflater;
 
         public LeDeviceListAdapter() {
             super();
             mLeDevices = new ArrayList<>();
-            mInflator = getActivity().getLayoutInflater();
+            mInflater = getActivity().getLayoutInflater();
         }
 
         /**
@@ -367,7 +371,7 @@ public class DeviceListFragment extends ListFragment {
             ViewHolder viewHolder;
             // General ListView optimization code.
             if (view == null) {
-                view = mInflator.inflate(R.layout.listitem_device, null);
+                view = mInflater.inflate(R.layout.listitem_device, null);
                 viewHolder = new ViewHolder();
                 viewHolder.deviceAddress = (TextView) view.findViewById(R.id.device_address);
                 viewHolder.deviceName = (TextView) view.findViewById(R.id.device_name);
@@ -377,12 +381,20 @@ public class DeviceListFragment extends ListFragment {
             }
 
             BluetoothDevice device = mLeDevices.get(i);
-            final String deviceName = device.getName();
-            if (deviceName != null && deviceName.length() > 0)
-                viewHolder.deviceName.setText(deviceName);
-            else
-                viewHolder.deviceName.setText(R.string.unknown_device);
-            viewHolder.deviceAddress.setText(device.getAddress());
+            if(device != null){
+                final String deviceName = device.getName();
+                if (deviceName != null && deviceName.length() > 0)
+                    viewHolder.deviceName.setText(deviceName);
+                else
+                    viewHolder.deviceName.setText(R.string.unknown_device);
+
+                viewHolder.deviceAddress.setText(device.getAddress());
+            }else{
+                viewHolder.deviceName.setText(R.string.warning_list_item_title);
+                viewHolder.deviceAddress.setText(R.string.warning_list_item_content);
+                Log.e(TAG,"listView get null item");
+            }
+
 
             return view;
         }
@@ -393,6 +405,6 @@ public class DeviceListFragment extends ListFragment {
      * 回调：选择了蓝牙设备
      */
     public interface OnChooseLeDeviceCallBack {
-        void onChooseLeDevice(BluetoothDevice device);
+        void onChooseLeDevice(BluetoothDevice device, UserEntity userInfo);
     }
 }

@@ -36,7 +36,7 @@
         <View
             android:layout_width="fill_parent"
             android:layout_height="1px"
-            android:background="#90909090"
+            android:background="@color/dividerGray"
             android:id="@+id/view_Divider"
             android:layout_below="@+id/layout_LeScanInfo"
             android:layout_alignParentStart="true" />
@@ -51,7 +51,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textColor="#0094B0"
+            android:textColor="@color/sysBlue400"
             android:text="设备列表"
             android:id="@+id/text_ListHead"
             android:layout_below="@+id/view_Divider"
@@ -62,7 +62,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textColor="#0094B0"
+            android:textColor="@color/sysBlue400"
             android:text="@string/le_scan_active"
             android:id="@+id/text_LeScanInfo"
             android:layout_marginLeft="12dp"
