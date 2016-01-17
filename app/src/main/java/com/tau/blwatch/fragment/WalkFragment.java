@@ -1,4 +1,4 @@
-package com.tau.blwatch;
+package com.tau.blwatch.fragment;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -28,16 +28,31 @@ import android.widget.Toast;
 import com.ns.nsbletizhilib.ITiZhiBleGattCallbackHelper;
 import com.ns.nsbletizhilib.TiZhiData;
 import com.ns.nsbletizhilib.TiZhiGattAttributesHelper;
+import com.tau.blwatch.MainActivity;
+import com.tau.blwatch.R;
+import com.tau.blwatch.util.BluetoothLeService;
+import com.tau.blwatch.util.FormKeyHelper;
+import com.tau.blwatch.util.UserEntity;
+import com.tau.blwatch.util.UrlHelper;
 import com.zhaoxiaodan.miband.ActionCallback;
 import com.zhaoxiaodan.miband.MiBandConnectHelper;
 import com.zhaoxiaodan.miband.listeners.NotifyListener;
 import com.zhaoxiaodan.miband.listeners.RealtimeStepsNotifyListener;
 
+import org.xutils.http.RequestParams;
+import org.xutils.view.annotation.ContentView;
+import org.xutils.view.annotation.ViewInject;
+
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
 import dmax.dialog.SpotsDialog;
 
+//TODO：更改数据上传服务器的逻辑
+//TODO：将此页面分离成若干针对不同设备的页面
+
+@ContentView(R.layout.fragment_walk)
 public class WalkFragment extends Fragment {
     private static final String	TAG_MIBAND		= "==[mibandtest]==";
 
@@ -45,7 +60,7 @@ public class WalkFragment extends Fragment {
     private static final String ARG_LASTFRAGMENT = "lastFragment";
     private static final String ARG_DEVICE = "bluetoothDevice";
 
-    private String mUserInfo;
+    private UserEntity mUserInfo;
     private String mLastFragment;
     private static BluetoothDevice mBluetoothDevice;
 
@@ -81,7 +96,25 @@ public class WalkFragment extends Fragment {
     private static TextView mCircleCenterTextView, mCircleBottomTextView, mFragmentBottomTextView;
     private static TextView deRecvDeviceName, deRecvDeviceAdd;
 
+    private DecimalFormat mDecimalFormat = new DecimalFormat(".00");
+
+    @ViewInject(R.id.debug_updata)
+    private static TextView mDebugUpdata;
+    @ViewInject(R.id.debug_step_cache)
+    private static TextView mDebugStepCache;
+    @ViewInject(R.id.debug_maxheart_cache)
+    private static TextView mDebugMaxHeart;
+    @ViewInject(R.id.debug_avgheart_cache)
+    private static TextView mDebugAvgHeart;
+    @ViewInject(R.id.debug_minheart_cache)
+    private static TextView mDebugMinHeart;
+
     private static AlertDialog mChartLoadingDialog;
+
+    //TODO：修改数值缓存的逻辑，包括何时重置，何时计算，何时上传等
+    private static int countHeart;
+    private static float cacheAvgHeart,cacheMaxHeart,cacheMinHeart;
+    private static int cacheStep;
 
     private static final int Message_Circle_Center = 1;
     private static final int Message_Circle_Bottom = 2;
@@ -109,6 +142,8 @@ public class WalkFragment extends Fragment {
     }
 
     private static ViewControlHandler  mViewControlHandler = new ViewControlHandler(Looper.getMainLooper());
+
+    //TODO：将蓝牙手表PTWATCH的监听服务与GATT广播接收器包装成独立的类进行调用
 
     // Code to manage Service lifecycle.
     public final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -186,10 +221,10 @@ public class WalkFragment extends Fragment {
      * @param lastFragment 跳转源页面.
      * @return A new instance of fragment WalkFragment.
      */
-    public static WalkFragment newInstance(String userInfo, BluetoothDevice device, String lastFragment) {
+    public static WalkFragment newInstance(UserEntity userInfo, BluetoothDevice device, String lastFragment) {
         WalkFragment fragment = new WalkFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_USERINFO, userInfo);
+        args.putParcelable(ARG_USERINFO, userInfo);
         args.putParcelable(ARG_DEVICE, device);
         args.putString(ARG_LASTFRAGMENT, lastFragment);
         fragment.setArguments(args);
@@ -221,7 +256,7 @@ public class WalkFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
-            mUserInfo = getArguments().getString(ARG_USERINFO);
+            mUserInfo = getArguments().getParcelable(ARG_USERINFO);
             mBluetoothDevice = getArguments().getParcelable(ARG_DEVICE);
             mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
         }
@@ -249,6 +284,18 @@ public class WalkFragment extends Fragment {
         //定义页面底部TextView
         mFragmentBottomTextView = (TextView) fragmentView.findViewById(R.id.textFragmentBottom);
 
+        mDebugUpdata.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                RequestParams requestParams = new RequestParams(UrlHelper.upload_data_url);
+                requestParams.addHeader("ContentType", "application/json");
+                requestParams.addBodyParameter(FormKeyHelper.action, UrlHelper.upload_heart_action);
+                requestParams.addBodyParameter(FormKeyHelper.upload_user_id, mUserInfo.getUserID());
+                requestParams.addBodyParameter(FormKeyHelper.bluetooth_address, mBluetoothDevice.getAddress());
+                requestParams.addBodyParameter(FormKeyHelper.upload_heart, Float.toString(cacheAvgHeart));
+            }
+        });
+
         //定义浮动按钮
         mFab_bottom = (FloatingActionButton) getActivity().findViewById(R.id.fab_bottom);
         mFab_top = (FloatingActionButton) getActivity().findViewById(R.id.fab_top);
@@ -260,7 +307,7 @@ public class WalkFragment extends Fragment {
             public void onClick(View view) {
                 if(mBluetoothDevice == null){
                     //跳转至设备列表界面
-                    mJumpCallBack.onJumpToDeviceList(null);
+                    mJumpCallBack.onJumpToDeviceList(null, mUserInfo);
                     Log.d("FragmentWList","From " + this.getClass().getSimpleName());
                 }else{
                     if (mBluetoothDevice.getName() != null)
@@ -294,7 +341,7 @@ public class WalkFragment extends Fragment {
 
                 if(mBluetoothDevice == null){
                     //跳转至设备列表界面
-                    mJumpCallBack.onJumpToDeviceList(null);
+                    mJumpCallBack.onJumpToDeviceList(null, mUserInfo);
                     Log.d("FragmentWList","From " + this.getClass().getSimpleName());
                 }else{
                     switch (mBluetoothDevice.getName()){
@@ -312,13 +359,13 @@ public class WalkFragment extends Fragment {
 //                                MiBandConnectHelper.disableSensorDataNotify();
                             } else{
                                 //跳转至设备列表界面
-                                mJumpCallBack.onJumpToDeviceList(null);
+                                mJumpCallBack.onJumpToDeviceList(null, mUserInfo);
                                 Log.d("FragmentWList","From " + this.getClass().getSimpleName());
                             }
                             break;
                     }
                     //跳转至历史统计界面
-                    mJumpCallBack.onJumpToHistoryTable(mBluetoothDevice);
+                    mJumpCallBack.onJumpToHistoryTable(mBluetoothDevice, mUserInfo);
                 }
             }
         });
@@ -460,8 +507,20 @@ public class WalkFragment extends Fragment {
                 else {
                     mFragmentBottomTextView.setText(data);  //设置UI
                     try{
+                        int heartValue = Integer.parseInt(data);
+                        countHeart ++;
+                        cacheAvgHeart = (cacheAvgHeart * (countHeart - 1) + heartValue) / countHeart;
+                        if (heartValue > cacheMaxHeart)
+                            cacheMaxHeart = heartValue;
+                        if (heartValue < cacheMinHeart)
+                            cacheMinHeart = heartValue;
+
+                        mDebugAvgHeart.setText(Float.toString(cacheAvgHeart));
+                        mDebugMaxHeart.setText(Float.toString(cacheMaxHeart));
+                        mDebugMinHeart.setText(Float.toString(cacheMinHeart));
+
                         mSqlIOCallBack.onSendHeartToDB(
-                                Integer.parseInt(data),simulateMaxHeart,simulateMinHeart); //通过回调经由activity上传数据库
+                                heartValue, simulateMaxHeart, simulateMinHeart); //通过回调经由activity上传数据库
                     }catch (java.lang.NumberFormatException e){
                         Log.d("IntegerCatch","data");//将不是数字的报文忽略
                     }
@@ -474,6 +533,14 @@ public class WalkFragment extends Fragment {
                 else{
                     mCircleCenterTextView.setText(data);    //设置UI
                     try{
+                        int stepValue = Integer.parseInt(data);
+                        if(stepValue >= cacheStep)
+                            cacheStep = stepValue;
+                        else
+                            Log.d("StepCount","Next Part");
+
+                        mDebugStepCache.setText(Integer.toString(cacheStep));
+
                         mSqlIOCallBack.onSendStepToDB(Integer.parseInt(data)); //通过回调经由activity上传数据库
                     }catch (java.lang.NumberFormatException e){
                         Log.d("IntegerCatch","data");//将不是数字的报文忽略
@@ -533,26 +600,11 @@ public class WalkFragment extends Fragment {
         if (gattServices == null)
             return;
         String uuid;
-//        String unknownServiceString = getResources().getString(
-//                R.string.unknown_service);
-//        String unknownCharaString = getResources().getString(
-//                R.string.unknown_characteristic);
-//        ArrayList<HashMap<String, String>> gattServiceData = new ArrayList<HashMap<String, String>>();
-//        ArrayList<ArrayList<HashMap<String, String>>> gattCharacteristicData = new ArrayList<ArrayList<HashMap<String, String>>>();
-        mGattCharacteristics = new ArrayList<>();
 
         // Loops through available GATT Services.
         for (BluetoothGattService gattService : gattServices) {
-//            HashMap<String, String> currentServiceData = new HashMap<String, String>();
             uuid = gattService.getUuid().toString();
             if (uuid.equals("0000180d-0000-1000-8000-00805f9b34fb")) {
-//                currentServiceData
-//                        .put(LIST_NAME, SampleGattAttributes.lookup(uuid,
-//                                unknownServiceString));
-//                currentServiceData.put(LIST_UUID, uuid);
-//                gattServiceData.add(currentServiceData);
-
-//                ArrayList<HashMap<String, String>> gattCharacteristicGroupData = new ArrayList<HashMap<String, String>>();
                 List<BluetoothGattCharacteristic> gattCharacteristics = gattService
                         .getCharacteristics();
                 ArrayList<BluetoothGattCharacteristic> charas = new ArrayList<>();
@@ -560,15 +612,8 @@ public class WalkFragment extends Fragment {
                 // Loops through available Characteristics.
                 for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {
                     charas.add(gattCharacteristic);
-//                    HashMap<String, String> currentCharaData = new HashMap<String, String>();
-//                    uuid = gattCharacteristic.getUuid().toString();
-//                    currentCharaData.put(LIST_NAME, SampleGattAttributes
-//                            .lookup(uuid, unknownCharaString));
-//                    currentCharaData.put(LIST_UUID, uuid);
-//                    gattCharacteristicGroupData.add(currentCharaData);
                 }
                 mGattCharacteristics.add(charas);
-//                gattCharacteristicData.add(gattCharacteristicGroupData);
             }
         }
 
@@ -589,27 +634,6 @@ public class WalkFragment extends Fragment {
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
         return intentFilter;
     }
-
-//    // 16进制转为byte
-//    public byte[] hexStringToBytes(String hexString) {
-//        if (hexString == null || hexString.equals("")) {
-//            return null;
-//        }
-//        hexString = hexString.toUpperCase();
-//        int length = hexString.length() / 2;
-//        char[] hexChars = hexString.toCharArray();
-//        byte[] d = new byte[length];
-//        for (int i = 0; i < length; i++) {
-//            int pos = i * 2;
-//            d[i] = (byte) (charToByte(hexChars[pos]) << 4 | charToByte(hexChars[pos + 1]));
-//        }
-//        return d;
-//    }
-//
-//    private byte charToByte(char c) {
-//        return (byte) "0123456789ABCDEF".indexOf(c);
-//
-//    }
 
     class TZGattThread extends Thread {
         @Override
@@ -660,18 +684,15 @@ public class WalkFragment extends Fragment {
     }
 
     private static void setMiBandListeners(){
-//        MiBandConnectHelper.pair(new ActionCallback() {
-//
-//            @Override
-//            public void onSuccess(Object data) {
-                Log.d(TAG_MIBAND, "pair success");
-                // 设置断开监听器, 方便在设备断开的时候进行重连或者别的处理
+        Log.d(TAG_MIBAND, "pair success");
+        // 设置断开监听器, 方便在设备断开的时候进行重连或者别的处理
         MiBandConnectHelper.setDisconnectedListener(new NotifyListener() {
-                    @Override
-                    public void onNotify(byte[] data) {
-                        Log.d(TAG_MIBAND, "connect break");
-                    }
-                });
+
+            @Override
+            public void onNotify(byte[] data) {
+                Log.d(TAG_MIBAND, "connect break");
+            }
+        });
 
 //                //获取普通通知, data一般len=1, 值为通知类型, 类型暂未收集
 //                MiBandConnectHelper.setNormalNotifyListener(new NotifyListener() {
@@ -682,57 +703,30 @@ public class WalkFragment extends Fragment {
 //                    }
 //                });
 
-                // 获取实时步数通知, 设置好后, 摇晃手环(需要持续摇动10-20下才会触发), 会实时收到当天总步数通知，需要两步:
-                // 1.设置监听器
-
+        // 获取实时步数通知, 设置好后, 摇晃手环(需要持续摇动10-20下才会触发), 会实时收到当天总步数通知，需要两步:
+        // 1.设置监听器
         MiBandConnectHelper.setRealtimeStepsNotifyListener(new RealtimeStepsNotifyListener() {
 
-                    @Override
-                    public void onNotify(int steps) {
-                        Log.d(TAG_MIBAND, "RealTimeStepsNotifyListener:" + steps);
-                        Message message = new Message();
-                        message.what = Message_Circle_Center;
-                        message.obj = String.valueOf(steps);
-                        mViewControlHandler.sendMessage(message);
-                    }
-                });
+            @Override
+            public void onNotify(int steps) {
+                Log.d(TAG_MIBAND, "RealTimeStepsNotifyListener:" + steps);
+                Message message = new Message();
+                message.what = Message_Circle_Center;
+                message.obj = String.valueOf(steps);
+                mViewControlHandler.sendMessage(message);
+            }
+        });
 
-                // 2.开启通知
+        // 2.开启通知
         MiBandConnectHelper.enableRealtimeStepsNotify();
-
-//                // 获取重力感应器原始数据, 需要两步
-//                // 1. 设置监听器
-//                MiBandConnectHelper.setSensorDataNotifyListener(new NotifyListener() {
-//                    @Override
-//                    public void onNotify(byte[] data) {
-//                        int i = 0;
-//
-//                        int index = (data[i++] & 0xFF) | (data[i++] & 0xFF) << 8;  // 序号
-//                        int d1 = (data[i++] & 0xFF) | (data[i++] & 0xFF) << 8;
-//                        int d2 = (data[i++] & 0xFF) | (data[i++] & 0xFF) << 8;
-//                        int d3 = (data[i++] & 0xFF) | (data[i++] & 0xFF) << 8;
-//
-//                        Log.d(TAG_MIBAND, "SensorDataNotifyListener:" + index + " " + d1 + " " + d2 + " " + d3);
-//                    }
-//                });
-//
-//                // 2. 开启
-//                MiBandConnectHelper.enableSensorDataNotify();
-//            }
-//
-//            @Override
-//            public void onFail(int errorCode, String msg) {
-//                Log.d(TAG_MIBAND, "pair fail");
-//            }
-//        });
     }
 
     /**
      * 回调：跳转至设备列表界面
      */
     public interface OnJumpToOtherFragmentCallBack {
-        void onJumpToDeviceList(BluetoothDevice device);
-        void onJumpToHistoryTable(BluetoothDevice device);
+        void onJumpToDeviceList(BluetoothDevice device, UserEntity userInfo);
+        void onJumpToHistoryTable(BluetoothDevice device, UserEntity userInfo);
     }
 
     /**
