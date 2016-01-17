@@ -1,0 +1,138 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.tau.blwatch.fragment.LoginFragment">
+
+    <!-->
+    <ImageView
+        android:id="@+id/logoImageView"
+        android:layout_width="100dip"
+        android:layout_height="100dip"
+        android:layout_gravity="center"
+        android:layout_marginTop="55dp"
+        android:src="@mipmap/ic_launcher"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+
+        android:contentDescription="@string/description_login_logo_image"/>
+
+    <EditText
+        android:id="@+id/login_user_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="@string/text_hint_login_id"
+        android:layout_marginTop="42dp"
+        android:textColor="@color/pureBlack"
+        android:textColorHint="@color/miGray"
+        android:layout_marginLeft="@dimen/fab_margin"
+        android:layout_marginRight="@dimen/fab_margin"
+        android:layout_below="@+id/logoImageView"
+        android:layout_centerHorizontal="true" />
+
+    <EditText
+        android:id="@+id/login_user_passwd"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:inputType="textPassword"
+        android:ems="10"
+        android:hint="@string/text_hint_login_password"
+        android:textColor="@color/pureBlack"
+        android:textColorHint="@color/miGray"
+        android:layout_marginLeft="@dimen/fab_margin"
+        android:layout_marginRight="@dimen/fab_margin"
+        android:layout_below="@+id/login_user_id"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/colorPrimary"
+        android:textColor="@color/pureWhite"
+        android:text="@string/button_login"
+        android:id="@+id/login_button"
+        android:layout_below="@+id/login_user_passwd"
+        android:layout_marginTop="25dp"
+        android:layout_alignEnd="@+id/login_user_passwd"
+        android:layout_alignStart="@+id/login_user_passwd" />
+    <!-->
+    <ImageView
+        android:layout_width="128dp"
+        android:layout_height="128dp"
+        android:id="@+id/imageView_account"
+        android:src="@drawable/smart_watch_833px"
+        android:layout_above="@+id/login_user_id"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="50dp" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/login_user_id"
+
+        android:ems="12"
+        android:maxEms="12"
+        android:maxLines="1"
+        android:hint="@string/text_hint_login_id"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/login_user_passwd"
+        android:layout_below="@+id/login_user_id"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="15dp"
+
+        android:inputType="textPassword"
+        android:ems="12"
+        android:maxEms="12"
+        android:maxLength="16"
+        android:maxLines="1"
+        android:hint="@string/text_hint_login_password" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="注册"
+        android:id="@+id/textView_LoginToRegist"
+        android:layout_marginTop="20dp"
+        android:layout_below="@+id/login_user_passwd"
+        android:layout_alignLeft="@+id/login_user_passwd"
+        android:layout_alignStart="@+id/login_user_passwd"
+        android:layout_marginLeft="5dp"
+
+        android:clickable="true"
+        android:textColor="#00b3a1"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/button_login"
+        android:id="@+id/login_button"
+        android:textColor="#ffffff"
+        android:background="#00b3a1"
+        android:textSize="18sp"
+        android:layout_marginTop="30dp"
+        android:layout_below="@+id/textView_LoginToRegist"
+        android:layout_alignRight="@+id/login_user_passwd"
+        android:layout_alignEnd="@+id/login_user_passwd"
+        android:layout_alignLeft="@+id/textView_LoginToRegist"
+        android:layout_alignStart="@+id/textView_LoginToRegist" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="忘记密码？"
+        android:id="@+id/textView_LoginToFindPW"
+        android:layout_marginLeft="5dp"
+        android:clickable="true"
+        android:textColor="#00b3a1"
+        android:layout_alignTop="@+id/textView_LoginToRegist"
+        android:layout_alignEnd="@+id/login_button" />
+
+</RelativeLayout>
