@@ -14,7 +14,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="24dp"
-            android:textColor="#000000"
+            android:textColor="@color/pureBlack"
             android:text="title"/>
 
         <TextView
@@ -22,7 +22,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="12dp"
-            android:textColor="#5f666f"
+            android:textColor="@color/miGray"
             android:text="data"
             android:layout_below="@+id/device_name"
             android:layout_alignParentLeft="true"
