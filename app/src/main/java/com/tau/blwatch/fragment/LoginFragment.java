@@ -143,7 +143,7 @@ public class LoginFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        Log.d("LoginFragmrnt", "onResume");
+        Log.d("LoginFragment", "onResume");
         mFab_bottom.hide();
         mFab_top.hide();
         mFab_bottom_stop.hide();
@@ -215,7 +215,7 @@ public class LoginFragment extends Fragment {
 
     /** @param source 需要加密的字符串
      *  @param hashType  加密类型 （MD5 和 SHA）
-     *  @return
+     *  @return 加密后的HASH
      */
     public static String getHash(String source, String hashType) {
         // 用来将字节转换成 16 进制表示的字符
@@ -227,8 +227,7 @@ public class LoginFragment extends Fragment {
             md5 = MessageDigest.getInstance(hashType);
             md5.update(source.getBytes());
             byte[] encryptStr = md5.digest();
-            for (int i = 0; i < encryptStr.length; i++) {
-                int iRet = encryptStr[i];
+            for (int iRet:encryptStr) {
                 if (iRet < 0) {
                     iRet += 256;
                 }
