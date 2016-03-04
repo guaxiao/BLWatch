@@ -35,7 +35,7 @@ import com.tau.blwatch.util.FormKeyHelper;
 import com.tau.blwatch.util.UserEntity;
 import com.tau.blwatch.util.UrlHelper;
 import com.zhaoxiaodan.miband.ActionCallback;
-import com.zhaoxiaodan.miband.MiBandConnectHelper;
+import com.zhaoxiaodan.miband.MiBand;
 import com.zhaoxiaodan.miband.listeners.NotifyListener;
 import com.zhaoxiaodan.miband.listeners.RealtimeStepsNotifyListener;
 
@@ -76,6 +76,8 @@ public class WalkFragment extends Fragment {
     private BluetoothLeService mBluetoothLeService;
     private BluetoothGattCharacteristic mNotifyCharacteristic;
     private boolean mConnected = false;//设备链接状态，默认未连接
+
+    private MiBand MiBandConnectHelper = new MiBand(getActivity());
 
     /**
      * 停止同步
@@ -352,9 +354,8 @@ public class WalkFragment extends Fragment {
                             BLEUploadData(countShutDown);
                             break;
                         case DEVICE_MI1S:
-                            // TODO: 添加对小米手环的断开连接方法
-                            // WARNING: 以下方法对断开连接后重新搜索但找不到手环的问题没有效果
-                            if (MiBandConnectHelper.getIsConnected()) {
+                            if (MiBandConnectHelper.getDevice() != null) {
+                                // TODO: 添加对小米手环的断开连接方法
                                 MiBandConnectHelper.disableRealtimeStepsNotify();
 //                                MiBandConnectHelper.disableSensorDataNotify();
                             } else{
@@ -442,7 +443,7 @@ public class WalkFragment extends Fragment {
                     mChartLoadingDialog = new SpotsDialog(getActivity(),getString(R.string.wait_mi_band));
                     mChartLoadingDialog.show();
                     // 初始化小米手环蓝牙连接助手
-                    MiBandConnectHelper.initialize(getActivity());
+//                    MiBandConnectHelper.initialize(getActivity());
                     // 连接小米手环
                     MiBandConnectHelper.connect(mBluetoothDevice, new ActionCallback() {
                         @Override
@@ -489,6 +490,8 @@ public class WalkFragment extends Fragment {
         mFab_top = null;    //注销在fragment下的浮动按钮
         mFab_bottom = null;
         mFab_bottom_stop= null;
+
+        MiBandConnectHelper = null;
     }
 
     /**
@@ -683,7 +686,7 @@ public class WalkFragment extends Fragment {
         }
     }
 
-    private static void setMiBandListeners(){
+    private void setMiBandListeners(){
         Log.d(TAG_MIBAND, "pair success");
         // 设置断开监听器, 方便在设备断开的时候进行重连或者别的处理
         MiBandConnectHelper.setDisconnectedListener(new NotifyListener() {
