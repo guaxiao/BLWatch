@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity
     private FragmentManager mFragmentManager = getSupportFragmentManager();
 
     //app内的通信信息 <基于fragment工厂模式化>
-    private UserEntity mUserInfo;
+    private UserEntity mUserInfo = new UserEntity();
     private BluetoothDevice mDevice;
     private String lastFragment = "";
 
