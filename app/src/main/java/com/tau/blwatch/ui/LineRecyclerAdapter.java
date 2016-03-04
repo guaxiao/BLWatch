@@ -9,9 +9,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-/**
- * Created by Administrator on 2015/12/19 0019.
- */
 public class LineRecyclerAdapter extends RecyclerView.Adapter<LineRecyclerAdapter.MyViewHolder> {
 
     private static int mItemResource,mViewResource;
