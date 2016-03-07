@@ -15,6 +15,7 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.tau.blwatch.R;
+import com.tau.blwatch.fragment.base.BaseFragment;
 import com.tau.blwatch.util.UserEntity;
 import com.tau.blwatch.util.UrlHelper;
 import com.tau.blwatch.util.SharePrefUtil;
@@ -31,46 +32,13 @@ import java.security.NoSuchAlgorithmException;
 
 import dmax.dialog.SpotsDialog;
 
-public class LoginFragment extends Fragment {
-    private static final String	TAG		= "LoginFragment";
-
-    private static final String ARG_USERINFO = "userInfo";
-    private static final String ARG_LASTFRAGMENT = "lastFragment";
-    private static final String ARG_DEVICE = "bluetoothDevice";
-
-    private UserEntity mUserInfo;
-    private String mLastFragment;
-    private static BluetoothDevice mBluetoothDevice;
-
+public class LoginFragment extends BaseFragment {
     private OnJumpToOtherFragmentCallBack mJumpCallBack;
-
-    private FloatingActionButton mFab_bottom, mFab_top, mFab_bottom_stop;
 
     private EditText mUserIdEditText,mUserPWordEditText;
     private Button mLoginButton;
 
-    private static AlertDialog mChartLoadingDialog;
-
     private String mUserName,mUserPWordMD5;
-
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param userInfo 用户信息，为空或NULL时代表用户未登录.
-     * @param device 设备信息的序列化
-     * @param lastFragment 跳转源页面.
-     * @return A new instance of fragment WalkFragment.
-     */
-    public static LoginFragment newInstance(UserEntity userInfo, BluetoothDevice device, String lastFragment) {
-        LoginFragment fragment = new LoginFragment();
-        Bundle args = new Bundle();
-        args.putParcelable(ARG_USERINFO, userInfo);
-        args.putParcelable(ARG_DEVICE, device);
-        args.putString(ARG_LASTFRAGMENT, lastFragment);
-        fragment.setArguments(args);
-        return fragment;
-    }
 
     public LoginFragment() {
         // Required empty public constructor
@@ -90,25 +58,15 @@ public class LoginFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mUserInfo = getArguments().getParcelable(ARG_USERINFO);
-            mBluetoothDevice = getArguments().getParcelable(ARG_DEVICE);
-            mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
-        }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View fragmentView = inflater.inflate(R.layout.fragment_login, container, false);
+        super.onCreateView(inflater,container,savedInstanceState);
 
-        //定义浮动按钮
-        mFab_bottom = (FloatingActionButton) getActivity().findViewById(R.id.fab_bottom);
-        mFab_top = (FloatingActionButton) getActivity().findViewById(R.id.fab_top);
-        mFab_bottom_stop= (FloatingActionButton) getActivity().findViewById(R.id.fab_bottom_stop);
-
-        mUserIdEditText = (EditText)fragmentView.findViewById(R.id.login_user_id);
-        mUserPWordEditText = (EditText)fragmentView.findViewById(R.id.login_user_passwd);
+        mUserIdEditText = (EditText)mFragmentView.findViewById(R.id.login_user_id);
+        mUserPWordEditText = (EditText)mFragmentView.findViewById(R.id.login_user_passwd);
 
         String historyUserName = SharePrefUtil.getString(getActivity(), FormKeyHelper.user_name, null);
         if(historyUserName != null){
@@ -116,7 +74,7 @@ public class LoginFragment extends Fragment {
             mUserPWordEditText.requestFocus();
         }
 
-        mLoginButton = (Button)fragmentView.findViewById(R.id.login_button);
+        mLoginButton = (Button)mFragmentView.findViewById(R.id.login_button);
 
         mLoginButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -136,8 +94,8 @@ public class LoginFragment extends Fragment {
             }
         });
 
-        //TODO：对“注册”与“忘记密码”（或其他功能）站位TextView的功能完善
-        return fragmentView;
+        //TODO：对“注册”与“忘记密码”（或其他功能）占位TextView的功能完善
+        return mFragmentView;
     }
 
     @Override
@@ -153,9 +111,6 @@ public class LoginFragment extends Fragment {
     public void onDetach() {
         super.onDetach();
         mJumpCallBack = null;
-        mFab_top = null;    //注销在fragment下的浮动按钮
-        mFab_bottom = null;
-        mFab_bottom_stop= null;
     }
 
     private void onLoginCenter(){
