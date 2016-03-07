@@ -72,7 +72,9 @@ public class MainActivity extends AppCompatActivity
 
     //app内的通信信息 <基于fragment工厂模式化>
     private UserEntity mUserInfo = new UserEntity();
+//    private UserEntity mUserInfo = new UserEntity();
     private BluetoothDevice mDevice;
+    protected ArrayList<String> mCreateFlag;
     private String lastFragment = "";
 
     //来自 BluetoothAdapter.ACTION_REQUEST_ENABLE 弹出窗口的activity回退请求码
@@ -95,11 +97,6 @@ public class MainActivity extends AppCompatActivity
         //打开或创建HistoryData.db数据库
 //        mHistoryDatabase = openOrCreateDatabase(DATABASE_NAME, Context.MODE_PRIVATE, null);
 //        mHistoryDatabase.close();
-
-        //TODO：全工程xUtil化
-        //初始化xUtils3框架
-        x.Ext.init(getApplication());
-        x.Ext.setDebug(true);
 
         mHistoryDBHelper = new HistoryDBHelper(this);
         //在此HistoryDBHelper的源码中自动调用了openOrCreateDatabase，无需担心数据库未建立的情况
@@ -156,7 +153,7 @@ public class MainActivity extends AppCompatActivity
             //跳转到登录页面
             mFragmentManager.beginTransaction()
                     .replace(R.id.mainFrame, LoginFragment
-                            .newInstance(mUserInfo, mDevice, lastFragment))
+                            .newInstance(LoginFragment.class, mUserInfo, mDevice, mCreateFlag, lastFragment))
                     .commit();
             //设置初始化actionBar标题
             setTitle(R.string.nav_login_title);
@@ -228,30 +225,35 @@ public class MainActivity extends AppCompatActivity
             id = -1;
 
         //菜单栏的监听 --在此添加菜单项目的事件--
-        if (id == R.id.action_settings) {   //设置界面
-            return true;
-        }else if(id == R.id.action_reset_db) {  //重置数据库
-            mHistoryDBHelper.resetTable();
-            return true;
-        }else if(id == R.id.action_simulation_db){  //模拟注入数据
-            mHistoryDBHelper.simulateData();
-            Log.d("simData","click");
-            return true;
-        }else if(id == R.id.action_logout){ //注销账户
-            if (!SharePrefUtil.getBoolean(this, FormKeyHelper.is_login, false)) //如果缓存数值为未登录或者无此项缓存数值
-                Toast.makeText(this, "未登录", Toast.LENGTH_SHORT).show();
-            else {  //若已登录，则置状态为未登录并回退到登录界面
-                mUserInfo = null;
-                mDevice = null;
-                SharePrefUtil.saveBoolean(this, FormKeyHelper.is_login, false);
-                mFragmentManager.beginTransaction()
-                        .replace(R.id.mainFrame, LoginFragment
-                                .newInstance(mUserInfo,mDevice,lastFragment))
-                        .commit();
-                //设置actionBar标题
-                setTitle(R.string.nav_login_title);
-                lockMenus();
-            }
+        switch (id){
+            case R.id.action_settings:   //设置界面
+                return true;
+            case R.id.action_reset_db:   //重置数据库
+                mHistoryDBHelper.resetTable();
+                return true;
+            case R.id.action_simulation_db:  //模拟注入数据
+                mHistoryDBHelper.simulateData();
+                Log.d("simData","click");
+                return true;
+            case R.id.action_simulation_device: //模拟注入设备历史
+                mHistoryDBHelper.simulateDeviceData();
+                return true;
+            case R.id.action_logout: //注销账户
+                if (!SharePrefUtil.getBoolean(this, FormKeyHelper.is_login, false)) //如果缓存数值为未登录或者无此项缓存数值
+                    Toast.makeText(this, "未登录", Toast.LENGTH_SHORT).show();
+                else {  //若已登录，则置状态为未登录并回退到登录界面
+                    mUserInfo = null;
+                    mDevice = null;
+                    SharePrefUtil.saveBoolean(this, FormKeyHelper.is_login, false);
+                    mFragmentManager.beginTransaction()
+                            .replace(R.id.mainFrame, LoginFragment
+                                    .newInstance(LoginFragment.class, mUserInfo, mDevice, mCreateFlag, lastFragment))
+                            .commit();
+                    //设置actionBar标题
+                    setTitle(R.string.nav_login_title);
+                    lockMenus();
+                }
+                return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -266,7 +268,7 @@ public class MainActivity extends AppCompatActivity
         if (id == R.id.nav_walk) {//进入WALK页面
             mFragmentManager.beginTransaction()
                     .replace(R.id.mainFrame, WalkFragment
-                            .newInstance(mUserInfo, mDevice, lastFragment))
+                            .newInstance(WalkFragment.class, mUserInfo, mDevice, mCreateFlag, lastFragment))
                     .commit();
             //设置actionBar标题
             setTitleByDevice(mDevice);
@@ -276,7 +278,7 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_history) { //进入HISTORY页面
             mFragmentManager.beginTransaction()
                     .replace(R.id.mainFrame, HistoryFragment
-                            .newInstance(mUserInfo, mDevice, lastFragment))
+                            .newInstance(HistoryFragment.class, mUserInfo, mDevice, mCreateFlag, lastFragment))
                     .commit();
             //设置actionBar标题
             setTitle(R.string.nav_history_title);
@@ -328,6 +330,8 @@ public class MainActivity extends AppCompatActivity
         mActionBarDrawerToggle.setDrawerIndicatorEnabled(true);
     }
 
+    //-----------------------------------------callback--------------------------------------------
+
     /**
      * 回调实现：跳转DeviceList界面
      */
@@ -350,7 +354,7 @@ public class MainActivity extends AppCompatActivity
         mUserInfo = userInfo;
         mFragmentManager.beginTransaction()
                 .replace(R.id.mainFrame, HistoryFragment
-                        .newInstance(mUserInfo, mDevice, lastFragment))
+                        .newInstance(HistoryFragment.class, mUserInfo, mDevice, mCreateFlag, lastFragment))
                 .commit();
         //设置actionBar标题
         setTitle(R.string.nav_history_title);
@@ -406,7 +410,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * 回调实现：选择LE设备，跳转到DEVICE_LIST
+     * 回调实现：选择LE设备，跳转到WalkFragment，并标记为来源于DEVICE_LIST
      * @param device LE设备
      */
     public void onChooseLeDevice(BluetoothDevice device, UserEntity userInfo){
@@ -427,7 +431,7 @@ public class MainActivity extends AppCompatActivity
 
         mFragmentManager.beginTransaction()
                 .replace(R.id.mainFrame, WalkFragment
-                        .newInstance(mUserInfo, mDevice, NAME_DeviceListFragment_JUMP))
+                        .newInstance(WalkFragment.class, mUserInfo, mDevice, mCreateFlag, lastFragment))
                 .commit();
         //设置actionBar标题
         setTitleByDevice(mDevice);
@@ -471,11 +475,13 @@ public class MainActivity extends AppCompatActivity
         if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
             mFragmentManager.beginTransaction()
                     .replace(R.id.mainFrame, WalkFragment
-                            .newInstance(mUserInfo, mDevice, lastFragment))
+                            .newInstance(WalkFragment.class, mUserInfo, mDevice, mCreateFlag, lastFragment))
                     .commit();
             setTitle(R.string.nav_walk_title);
         }
     }
+
+    //-----------------------------------------tools------------------------------------------------
 
     public Fragment getVisibleFragment(){
         FragmentManager fragmentManager = getSupportFragmentManager();
