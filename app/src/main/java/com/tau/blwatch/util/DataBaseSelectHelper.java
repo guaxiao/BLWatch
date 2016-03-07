@@ -206,7 +206,11 @@ public class DataBaseSelectHelper {
                             Log.d("pointCursor",pointCursor.getString(0) + " " + pointCursor.getString(1));
                             currentTimeFlag = Integer.valueOf(dateBlock.substring(dateBlock.lastIndexOf("-") + 1));
                             Log.d("pointCursor", "NoPassTimeBlock && isDate" + " currentTimeFlag=" + currentTimeFlag + " startTimeFlag=" + startTimeFlag + " lastYearTimeFlag=" + lastYearTimeFlag);
-                            tempList.add((float) currentTimeFlag - startTimeFlag + lastYearTimeFlag);
+                            float countTimeFlag = (float) currentTimeFlag - startTimeFlag + lastYearTimeFlag;
+                            //当以日期计时跨过月份或以小时计跨过一天时，多计一个大时间片的时长
+                            if(countTimeFlag < 0)
+                                countTimeFlag += startTimeFlag + 1;
+                            tempList.add(countTimeFlag);
                             mPointCollection.put(keyName, tempList);
                         }else{
                             tempList.add(pointCursor.getFloat(j));
