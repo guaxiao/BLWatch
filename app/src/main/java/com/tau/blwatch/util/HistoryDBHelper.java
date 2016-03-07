@@ -12,9 +12,6 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Random;
 
-/**
- * Created by Administrator on 2015/12/17 0017.
- */
 public class HistoryDBHelper extends SQLiteOpenHelper {
 
     private final static String DATABASE_NAME = "HistoryData.db";
@@ -22,10 +19,13 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     public final static String HEART_TABLE_NAME = "heart_table";
     public final static String STEP_TABLE_NAME = "step_table";
     public final static String WEIGHT_TABLE_NAME = "weight_table";
+    public final static String DEVICE_HISTORY_TABLE_NAME = "device_history_table";
 
     private final static String INFO_ID = "id";
     private final static String INFO_TIME = "time";
     private final static String INFO_DEVICE_ADD = "device_add";
+    private final static String INFO_DEVICE_NAME = "device_name";
+    private final static String INFO_DEVICE_TYPE = "device_type";
     private final static String AVG_HEART = "avg_heart";
     private final static String MAX_HEART = "max_heart";
     private final static String MIN_HEART = "min_heart";
@@ -43,7 +43,9 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
 
     //以下为模拟注入数据时使用的量
     private long writeTime = 0L;
-    public final static String sDeviceAdd = "00:2C:00:00:00:FF";
+    public final static String sDeviceAdd_TPTWATCH = "00:2C:00:00:00:FF";
+    public final static String sDeviceAdd_TPTESc = "00:2D:00:00:00:FF";
+    public final static String sDeviceAdd_TMI1S = "00:1C:00:00:00:FF";
     public final static long sTestIntervals =  5 * 60 * 1000;   //测试数据数据库计入间隔5分钟
     public final static long sHeartAndStepIntervals = 5 * 60 * 1000;   //心跳数据库计入间隔5分钟
     public final static long sWeightIntervals = 8 * 60 * 60 * 1000; //体重数据库计入间隔8小时
@@ -89,10 +91,13 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         createTable(db, HEART_TABLE_NAME);
 
         //创建表记录步数
-        createTable(db,STEP_TABLE_NAME);
+        createTable(db, STEP_TABLE_NAME);
 
         //创建表记录体重
         createTable(db, WEIGHT_TABLE_NAME);
+
+        //创建表记录设备历史
+        createTable(db, DEVICE_HISTORY_TABLE_NAME);
     }
 
     public void createTable(SQLiteDatabase db, String tableName){
@@ -120,6 +125,13 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
                         INFO_TIME + " INTEGER ," +
                         INFO_DEVICE_ADD + " TEXT ," +
                         VALUE_WEIGHT + " INTEGER " + ");";
+                break;
+            case DEVICE_HISTORY_TABLE_NAME:
+                sql = "CREAT TABLE " + DEVICE_HISTORY_TABLE_NAME + "(" +
+                        INFO_DEVICE_ADD + " TEXT " + "primary key," +
+                        INFO_DEVICE_NAME + " TEXT ," +
+                        INFO_DEVICE_TYPE + " TEXT ," +
+                        INFO_TIME + "INTEGER" + ");";
                 break;
         }
 
@@ -177,7 +189,39 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         return row;
     }
 
+    //增加设备历史数据
+    public long insertDeviceHistory(long writeTime, String deviceAdd, String deviceName, String deviceType){
+        SQLiteDatabase db = this.getWritableDatabase();
+        /* ContentValues */
+        ContentValues cv = new ContentValues();
+        cv.put(INFO_TIME, writeTime / SQLITE_DATE_PER_JAVA_DATE);
+        cv.put(INFO_DEVICE_ADD, deviceAdd);
+        cv.put(INFO_DEVICE_NAME, deviceName);
+        cv.put(INFO_DEVICE_TYPE, deviceType);
+        long row = db.insert(WEIGHT_TABLE_NAME, null, cv);
+        return row;
+    }
 
+
+    public long insertDeviceHistory(long writeTime, String deviceAdd, String deviceName){
+        return 0;
+    }
+
+
+
+    public Cursor selectData(String tableName){
+        //当tableName为空或者不为设备列表table时
+        if(tableName == null
+                || !tableName.equals(DEVICE_HISTORY_TABLE_NAME))
+            return null;
+
+        //参数验证合法后
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT * FROM " + DEVICE_HISTORY_TABLE_NAME, null);
+
+        return cursor;
+    }
     /**
      * 按时间区间查询数据
      *
@@ -268,6 +312,21 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     }
 
     /**
+     *  模拟设备列表历史记录
+     */
+    public void simulateDeviceData(){
+        final SQLiteDatabase db = this.getWritableDatabase();
+        resetTable(DEVICE_HISTORY_TABLE_NAME);
+
+        writeTime = new Date().getTime();
+        db.beginTransaction();  //手动设置开始事务
+
+        insertDeviceHistory(writeTime, "00:FF:FF:FF:F0:FF", "T*PTWatch", "中弘腕表");
+        insertDeviceHistory(writeTime, "00:FF:FF:FF:F1:FF", "T*PTESc", "中弘电子称");
+        insertDeviceHistory(writeTime, "00:FF:FF:FF:F2:FF", "T*PTMI1S", "小米手环");
+    }
+
+    /**
      *  模拟为期一年半的全部数据注入
      */
 //    public void simulateData(long sunTime, long intervalsTime, String tableName){
@@ -287,6 +346,8 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
                 db.beginTransaction();          //手动设置开始事务
                 // Transaction活动时间内所有的操作将被包装成统一的事务进行SQL操作
 
+                //模拟设备的MAC（做识别码）
+                String sDeviceAdd = sDeviceAdd_TMI1S;
                 //模拟注入心跳与步数
                 for(long i = sSumTime;i > - sObligateTime;i -= sHeartAndStepIntervals + sTimeShake){
                     sTimeShake = (long)(Math.random() * 100);
@@ -306,6 +367,12 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
                         if(Math.random() < 0.02)
                             sStepBench = (int)(Math.random() * 800);
 
+                        //反复注入MI1S与PTWATCH数据，模拟两种设备的数据输
+                        if(sDeviceAdd.equals(sDeviceAdd_TMI1S))
+                            sDeviceAdd = sDeviceAdd_TPTWATCH;
+                        else
+                            sDeviceAdd = sDeviceAdd_TMI1S;
+
                         Date mlDate = new Date(simulateTime);
                         insertHeart(simulateTime, sDeviceAdd, (int)dHeartAvg, (int)dHeartMax, (int)dHeartMin);
                         insertStep(simulateTime, sDeviceAdd, sStepBench);
@@ -316,6 +383,7 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
                     }
                 }
 
+                //模拟注入体重
                 for(long i = sSumTime + sObligateTime;i > - sObligateTime;i -= sWeightIntervals + sTimeShake){
                     sTimeShake = (long)(Math.random() * 100);
 
@@ -334,7 +402,7 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
                         else
                             dWeightBench -= Math.random() * sWeightParaDown;
 
-                        insertWeight(simulateTime, sDeviceAdd, dWeightBench);
+                        insertWeight(simulateTime, sDeviceAdd_TPTESc, dWeightBench);
                         Log.d("simData", "Date " + mlSimpleDateFormat.format(mlDate));
                         Log.d("simData", "insertWeight " + dWeightBench);
                     }
