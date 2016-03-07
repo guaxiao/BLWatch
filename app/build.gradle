@@ -31,5 +31,5 @@ dependencies {
     compile files('libs/ns_tizhi_helper.jar')
     compile 'com.github.d-max:spots-dialog:0.4@aar'
     compile 'com.zhaoxiaodan.miband:miband-sdk:1.1.2'
-    compile 'org.xutils:xutils:3.2.6'
+    compile 'org.xutils:xutils:3.3.20'
 }
