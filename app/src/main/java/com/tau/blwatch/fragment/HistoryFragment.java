@@ -18,6 +18,7 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.tau.blwatch.R;
+import com.tau.blwatch.fragment.base.BaseFragment;
 import com.tau.blwatch.ui.LineRecyclerAdapter;
 import com.tau.blwatch.util.DataBaseSelectHelper;
 import com.tau.blwatch.util.HistoryDBHelper;
@@ -47,19 +48,9 @@ import lecho.lib.hellocharts.model.Viewport;
 import lecho.lib.hellocharts.util.ChartUtils;
 import lecho.lib.hellocharts.view.ComboLineColumnChartView;
 
-public class HistoryFragment extends Fragment {
-    private static final String ARG_USERINFO = "userInfo";
-    private static final String ARG_LASTFRAGMENT = "lastFragment";
-    private static final String ARG_DEVICE = "bluetoothDevice";
-
-    private UserEntity mUserInfo;
-    private String mLastFragment;
-    private static BluetoothDevice mBluetoothDevice;
-
+public class HistoryFragment extends BaseFragment {
     private OnJumpToOtherFragmentCallBack mJumpCallBack;
     private OnSelectDataBaseCallBack mSelectDBCallBack;
-
-    private FloatingActionButton mFab_bottom, mFab_top, mFab_bottom_stop;
 
     private static ComboLineColumnChartView chart;
     private static ComboLineColumnChartData data;
@@ -82,27 +73,6 @@ public class HistoryFragment extends Fragment {
 
     private String mTagOfChartTime = null;
     private String mTagOfChartType = null;
-
-    private static AlertDialog mChartLoadingDialog;
-
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param userInfo 用户信息，为空或NULL时代表用户未登录.
-     * @param device 设备信息的序列化
-     * @param lastFragment 跳转源页面.
-     * @return A new instance of fragment WalkFragment.
-     */
-    public static HistoryFragment newInstance(UserEntity userInfo, BluetoothDevice device, String lastFragment) {
-        HistoryFragment fragment = new HistoryFragment();
-        Bundle args = new Bundle();
-        args.putParcelable(ARG_USERINFO, userInfo);
-        args.putParcelable(ARG_DEVICE, device);
-        args.putString(ARG_LASTFRAGMENT, lastFragment);
-        fragment.setArguments(args);
-        return fragment;
-    }
 
     public HistoryFragment() {
         // Required empty public constructor
@@ -129,25 +99,13 @@ public class HistoryFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mUserInfo = getArguments().getParcelable(ARG_USERINFO);
-            mBluetoothDevice = getArguments().getParcelable(ARG_DEVICE);
-            mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
-        }
-
-        mChartLoadingDialog = new SpotsDialog(getActivity());
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View fragmentView = inflater.inflate(R.layout.fragment_history, container,
-                false);
+        super.onCreateView(inflater,container,savedInstanceState);
 
-        //定义浮动按钮
-        mFab_bottom = (FloatingActionButton) getActivity().findViewById(R.id.fab_bottom);
-        mFab_top = (FloatingActionButton) getActivity().findViewById(R.id.fab_top);
-        mFab_bottom_stop = (FloatingActionButton) getActivity().findViewById(R.id.fab_bottom_stop);
         mFab_top.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -158,7 +116,7 @@ public class HistoryFragment extends Fragment {
         });
 
         //初始化图表控件
-        chart = (ComboLineColumnChartView) fragmentView.findViewById(R.id.chart);
+        chart = (ComboLineColumnChartView) mFragmentView.findViewById(R.id.chart);
         chart.setOnValueTouchListener(new ValueTouchListener());
         mTagOfChartType = TimeBlockEntity.CHART_TYPE_STEP;
         mTagOfChartTime = TimeBlockEntity.CHART_TIME_DAY;
@@ -167,7 +125,7 @@ public class HistoryFragment extends Fragment {
         generateChartThread(mTagOfChartTime, mTagOfChartType);
 
         //构建时间选择控件
-        mTimeRecyclerView = (RecyclerView) fragmentView.findViewById(R.id.id_recycler_view_of_time);
+        mTimeRecyclerView = (RecyclerView) mFragmentView.findViewById(R.id.id_recycler_view_of_time);
         mTimeRecyclerView.setLayoutManager(
                 new LinearLayoutManager(getActivity(), LinearLayout.HORIZONTAL, false));
         mTimeRecyclerAdapter = new LineRecyclerAdapter(
@@ -217,7 +175,7 @@ public class HistoryFragment extends Fragment {
         mTimeRecyclerView.setHasFixedSize(true);
 
         //构建类型选择控件
-        mTypeRecyclerView = (RecyclerView) fragmentView.findViewById(R.id.id_recycler_view_of_type);
+        mTypeRecyclerView = (RecyclerView) mFragmentView.findViewById(R.id.id_recycler_view_of_type);
         mTypeRecyclerView.setLayoutManager(
                 new LinearLayoutManager(getActivity(), LinearLayout.HORIZONTAL,false));
         mTypeRecyclerAdapter = new LineRecyclerAdapter(
@@ -259,7 +217,7 @@ public class HistoryFragment extends Fragment {
         mTypeRecyclerView.setAdapter(mTypeRecyclerAdapter);
         mTypeRecyclerView.setHasFixedSize(true);
 
-        return fragmentView;
+        return mFragmentView;
     }
 
     @Override
@@ -275,9 +233,6 @@ public class HistoryFragment extends Fragment {
     public void onDetach() {
         super.onDetach();
         mJumpCallBack = null;
-        mFab_top = null;    //注销在fragment下的浮动按钮
-        mFab_bottom = null;
-        mFab_bottom_stop= null;
     }
 
     //-----------------------------------------helloCharts------------------------------------------
