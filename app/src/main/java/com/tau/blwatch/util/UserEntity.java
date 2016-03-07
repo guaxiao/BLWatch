@@ -9,11 +9,7 @@ public class UserEntity implements Parcelable {
     private String userName;
     private String imgPath;
 
-    public UserEntity(){
-        userID = "-1";
-        userName = "N/A";
-        imgPath = "N/A";
-    }
+    public UserEntity(){}
 
     public UserEntity(Parcel source){
         userID = source.readString();
