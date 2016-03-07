@@ -1,59 +1,62 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/baseLayout_walk"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:fab="http://schemas.android.com/apk/res-auto"
 
     android:background="#3c444f"
-    tools:context="com.tau.bluetoothlewatch.WalkFragment">
-
-    <!-- TODO: Update blank fragment layout -->
+    tools:context="com.tau.blwatch.fragment.WalkFragment">
 
     <requestFocus android:layout_gravity="center" />
 
-    <RelativeLayout
+    <LinearLayout
+        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <ImageView
-            android:layout_width="279dp"
-            android:layout_height="279dp"
-            android:id="@+id/imageCircleButton"
-            android:layout_gravity="center_horizontal"
-            android:src="@drawable/circle_ring"
-            android:layout_weight="0.24"
-            android:layout_centerHorizontal="true"
-            android:layout_marginTop="24dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
+        <RelativeLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceMedium"
-            android:textColor="@color/miGray"
-            android:textSize="35sp"
-            android:text="@string/step_nil"
-            android:id="@+id/textCircleCenter"
-            android:layout_gravity="center_horizontal|top"
-            android:layout_marginTop="136dp"
-            android:layout_alignParentTop="true"
-            android:layout_centerHorizontal="true" />
+            android:layout_weight="1"
+            android:layout_gravity="center_horizontal">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textColor="@color/miGray"
-            android:text="0cal"
-            android:id="@+id/textCircleBottom"
-            android:layout_below="@+id/textCircleCenter"
-            android:layout_centerHorizontal="true" />
+            <ImageView
+                android:layout_width="279dp"
+                android:layout_height="279dp"
+                android:id="@+id/imageCircleButton"
+                android:layout_gravity="center_horizontal"
+                android:src="@drawable/circle_ring"
+                android:layout_centerVertical="true"
+                android:layout_centerHorizontal="true" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="@color/miGray"
+                android:textSize="35sp"
+                android:text="@string/step_nil"
+                android:id="@+id/textCircleCenter"
+                android:layout_gravity="center_horizontal|top"
+                android:layout_centerVertical="true"
+                android:layout_centerHorizontal="true" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="@color/miGray"
+                android:text="0cal"
+                android:id="@+id/textCircleBottom"
+                android:layout_below="@+id/textCircleCenter"
+                android:layout_centerHorizontal="true" />
+        </RelativeLayout>
 
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_alignParentBottom="true"
-            android:layout_centerHorizontal="true"
+            android:layout_weight="300"
             android:padding="@dimen/debug_margin">
 
             <TextView
@@ -96,7 +99,7 @@
                 android:textColor="@color/miGray"
                 android:text="@string/debug_text_updata"
                 android:id="@+id/debug_updata"
-                android:layout_above="@+id/textFragmentBottom"
+                android:layout_alignParentTop="true"
                 android:layout_alignParentEnd="true" />
 
             <TextView
@@ -140,5 +143,5 @@
                 android:layout_alignParentStart="true" />
 
         </RelativeLayout>
-    </RelativeLayout>
+    </LinearLayout>
 </FrameLayout>
