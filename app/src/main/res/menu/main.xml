@@ -17,6 +17,11 @@
         android:orderInCategory="100"
         app:showAsAction="never" />
 
+    <item android:id="@+id/action_simulation_device"
+        android:title="@string/action_simulation_device"
+        android:orderInCategory="100"
+        app:showAsAction="never" />
+
     <!--><item android:id="@+id/action_break_link"
         android:title="@string/action_break_link"
         android:orderInCategory="100"
