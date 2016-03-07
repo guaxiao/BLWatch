@@ -30,6 +30,7 @@ import com.ns.nsbletizhilib.TiZhiData;
 import com.ns.nsbletizhilib.TiZhiGattAttributesHelper;
 import com.tau.blwatch.MainActivity;
 import com.tau.blwatch.R;
+import com.tau.blwatch.fragment.base.BaseFragment;
 import com.tau.blwatch.util.BluetoothLeService;
 import com.tau.blwatch.util.FormKeyHelper;
 import com.tau.blwatch.util.UserEntity;
@@ -52,17 +53,10 @@ import dmax.dialog.SpotsDialog;
 //TODO：更改数据上传服务器的逻辑
 //TODO：将此页面分离成若干针对不同设备的页面
 
-@ContentView(R.layout.fragment_walk)
-public class WalkFragment extends Fragment {
-    private static final String	TAG_MIBAND		= "==[mibandtest]==";
-
-    private static final String ARG_USERINFO = "userInfo";
-    private static final String ARG_LASTFRAGMENT = "lastFragment";
-    private static final String ARG_DEVICE = "bluetoothDevice";
-
-    private UserEntity mUserInfo;
-    private String mLastFragment;
-    private static BluetoothDevice mBluetoothDevice;
+//@ContentView(R.layout.fragment_walk)
+public class WalkFragment extends BaseFragment {
+    private static final String	TAG_XUtils		= "fragment_walk-xUtils3";
+    private static final String	TAG_MIBAND		= "miband_pangliang";
 
     private static final String DEVICE_PTWATCH = "PTWATCH";
     private static final String DEVICE_NSW04 = "NS-W04";
@@ -94,24 +88,21 @@ public class WalkFragment extends Fragment {
     private final String LIST_UUID = "UUID";
 
 //    private FrameLayout mBaseLayout;
-    private FloatingActionButton mFab_bottom, mFab_top, mFab_bottom_stop;
     private static TextView mCircleCenterTextView, mCircleBottomTextView, mFragmentBottomTextView;
     private static TextView deRecvDeviceName, deRecvDeviceAdd;
 
     private DecimalFormat mDecimalFormat = new DecimalFormat(".00");
 
-    @ViewInject(R.id.debug_updata)
-    private static TextView mDebugUpdata;
-    @ViewInject(R.id.debug_step_cache)
-    private static TextView mDebugStepCache;
-    @ViewInject(R.id.debug_maxheart_cache)
-    private static TextView mDebugMaxHeart;
-    @ViewInject(R.id.debug_avgheart_cache)
-    private static TextView mDebugAvgHeart;
-    @ViewInject(R.id.debug_minheart_cache)
-    private static TextView mDebugMinHeart;
-
-    private static AlertDialog mChartLoadingDialog;
+//    @ViewInject(R.id.debug_updata)
+    private TextView mDebugUpdata;
+//    @ViewInject(R.id.debug_step_cache)
+    private TextView mDebugStepCache;
+//    @ViewInject(R.id.debug_maxheart_cache)
+    private TextView mDebugMaxHeart;
+//    @ViewInject(R.id.debug_avgheart_cache)
+    private TextView mDebugAvgHeart;
+//    @ViewInject(R.id.debug_minheart_cache)
+    private TextView mDebugMinHeart;
 
     //TODO：修改数值缓存的逻辑，包括何时重置，何时计算，何时上传等
     private static int countHeart;
@@ -214,25 +205,6 @@ public class WalkFragment extends Fragment {
         }
     };
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param userInfo 用户信息，为空或NULL时代表用户未登录.
-     * @param device 设备信息的序列化
-     * @param lastFragment 跳转源页面.
-     * @return A new instance of fragment WalkFragment.
-     */
-    public static WalkFragment newInstance(UserEntity userInfo, BluetoothDevice device, String lastFragment) {
-        WalkFragment fragment = new WalkFragment();
-        Bundle args = new Bundle();
-        args.putParcelable(ARG_USERINFO, userInfo);
-        args.putParcelable(ARG_DEVICE, device);
-        args.putString(ARG_LASTFRAGMENT, lastFragment);
-        fragment.setArguments(args);
-        return fragment;
-    }
-
     public WalkFragment() {
         // Required empty public constructor
     }
@@ -257,11 +229,6 @@ public class WalkFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mUserInfo = getArguments().getParcelable(ARG_USERINFO);
-            mBluetoothDevice = getArguments().getParcelable(ARG_DEVICE);
-            mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
-        }
 
         /*
          * 之后使用SharedPreferences配合设置菜单改变默认值
@@ -273,19 +240,19 @@ public class WalkFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        final View fragmentView = inflater.inflate(R.layout.fragment_walk, container,
-                false);
+        super.onCreateView(inflater,container,savedInstanceState);
 
         //得到容器ViewGroup
 //        mBaseLayout = (FrameLayout) fragmentView.findViewById(R.id.baseLayout_walk);
 
         //定义圆心TextView
-        mCircleCenterTextView = (TextView) fragmentView.findViewById(R.id.textCircleCenter);
+        mCircleCenterTextView = (TextView) mFragmentView.findViewById(R.id.textCircleCenter);
         //定义圆周底部TextView
-        mCircleBottomTextView = (TextView) fragmentView.findViewById(R.id.textCircleBottom);
+        mCircleBottomTextView = (TextView) mFragmentView.findViewById(R.id.textCircleBottom);
         //定义页面底部TextView
-        mFragmentBottomTextView = (TextView) fragmentView.findViewById(R.id.textFragmentBottom);
+        mFragmentBottomTextView = (TextView) mFragmentView.findViewById(R.id.textFragmentBottom);
 
+        mDebugUpdata = (TextView) mFragmentView.findViewById(R.id.debug_updata);
         mDebugUpdata.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -297,11 +264,6 @@ public class WalkFragment extends Fragment {
                 requestParams.addBodyParameter(FormKeyHelper.upload_heart, Float.toString(cacheAvgHeart));
             }
         });
-
-        //定义浮动按钮
-        mFab_bottom = (FloatingActionButton) getActivity().findViewById(R.id.fab_bottom);
-        mFab_top = (FloatingActionButton) getActivity().findViewById(R.id.fab_top);
-        mFab_bottom_stop= (FloatingActionButton) getActivity().findViewById(R.id.fab_bottom_stop);
 
         //右下重新连接按钮
         mFab_bottom.setOnClickListener(new View.OnClickListener() {
@@ -383,8 +345,8 @@ public class WalkFragment extends Fragment {
         }
 
         //设置左下角的设备名与设备地址显示TextView {debug}
-        deRecvDeviceName = (TextView) fragmentView.findViewById(R.id.textRecvDeviceName);
-        deRecvDeviceAdd = (TextView) fragmentView.findViewById(R.id.textRecvDeviceAdd);
+        deRecvDeviceName = (TextView) mFragmentView.findViewById(R.id.textRecvDeviceName);
+        deRecvDeviceAdd = (TextView) mFragmentView.findViewById(R.id.textRecvDeviceAdd);
 
         if(mBluetoothDevice == null){
             Log.d("WalkFragment","mDevice==null");
@@ -460,7 +422,7 @@ public class WalkFragment extends Fragment {
                     });
             }
         }
-        return fragmentView;
+        return mFragmentView;
     }
 
     @Override
@@ -487,9 +449,6 @@ public class WalkFragment extends Fragment {
         super.onDetach();
         mJumpCallBack = null;  //注销设备列表回调
         mSqlIOCallBack = null;  //注销SQL-IO回调
-        mFab_top = null;    //注销在fragment下的浮动按钮
-        mFab_bottom = null;
-        mFab_bottom_stop= null;
 
         MiBandConnectHelper = null;
     }
