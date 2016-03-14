@@ -72,7 +72,6 @@ public class MainActivity extends AppCompatActivity
 
     //app内的通信信息 <基于fragment工厂模式化>
     private UserEntity mUserInfo = new UserEntity();
-//    private UserEntity mUserInfo = new UserEntity();
     private BluetoothDevice mDevice;
     protected ArrayList<String> mCreateFlag;
     private String lastFragment = "";
@@ -91,16 +90,9 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        /**
-         * 以下数据库初始化操作可能需要另开线程
-         */
-        //打开或创建HistoryData.db数据库
-//        mHistoryDatabase = openOrCreateDatabase(DATABASE_NAME, Context.MODE_PRIVATE, null);
-//        mHistoryDatabase.close();
-
         mHistoryDBHelper = new HistoryDBHelper(this);
         //在此HistoryDBHelper的源码中自动调用了openOrCreateDatabase，无需担心数据库未建立的情况
-        mHistoryDatabase = mHistoryDBHelper.getWritableDatabase();
+        //mHistoryDatabase = mHistoryDBHelper.getWritableDatabase();
 
         //定义全局View
         setContentView(R.layout.activity_main);
@@ -142,7 +134,7 @@ public class MainActivity extends AppCompatActivity
 
             mFragmentManager.beginTransaction()
                 .replace(R.id.mainFrame, MainFragment
-                        .newInstance(mUserInfo, mDevice, lastFragment))
+                        .newInstance(MainFragment.class,mUserInfo, mDevice, mCreateFlag, lastFragment))
                 .commit();
         //设置初始化actionBar标题
             setTitle(R.string.nav_main_title);
@@ -288,7 +280,7 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_watch_list) { //进入WATCHLIST界面
             mFragmentManager.beginTransaction()
                     .replace(R.id.mainFrame, DeviceListFragment
-                            .newInstance(mUserInfo, mDevice, lastFragment))
+                            .newInstance(DeviceListFragment.class, mUserInfo, mDevice, mCreateFlag, lastFragment))
                     .commit();
             //设置actionBar标题
             setTitle(R.string.nav_watch_list_title);
@@ -340,7 +332,7 @@ public class MainActivity extends AppCompatActivity
         mUserInfo = userInfo;
         mFragmentManager.beginTransaction()
                 .replace(R.id.mainFrame, DeviceListFragment
-                        .newInstance(mUserInfo, mDevice, lastFragment))
+                        .newInstance(DeviceListFragment.class, mUserInfo, mDevice, mCreateFlag, lastFragment))
                 .commit();
         //设置actionBar标题
         setTitle(R.string.nav_watch_list_title);
@@ -371,7 +363,7 @@ public class MainActivity extends AppCompatActivity
 
         mFragmentManager.beginTransaction()
                 .replace(R.id.mainFrame, MainFragment
-                .newInstance(mUserInfo,mDevice,lastFragment))
+                .newInstance(MainFragment.class, mUserInfo, mDevice, mCreateFlag, lastFragment))
                 .commit();
         //设置actionBar标题
         setTitle(R.string.nav_main_title);
