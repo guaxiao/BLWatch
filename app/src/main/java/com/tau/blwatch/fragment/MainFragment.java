@@ -17,6 +17,7 @@ import android.widget.Toast;
 
 import com.tau.blwatch.MainActivity;
 import com.tau.blwatch.R;
+import com.tau.blwatch.fragment.base.BaseListFragment;
 import com.tau.blwatch.util.UserEntity;
 
 import java.util.ArrayList;
@@ -31,24 +32,12 @@ import lecho.lib.hellocharts.view.PieChartView;
 //TODO：实现导航列表的功能
 //TODO：完善饼图关于每日步数目标与已完成步数的显示
 
-public class MainFragment extends ListFragment {
-    private static final String	TAG		= "MainFragment";
-
-    private static final String ARG_USERINFO = "userInfo";
-    private static final String ARG_LASTFRAGMENT = "lastFragment";
-    private static final String ARG_DEVICE = "bluetoothDevice";
-
-    private UserEntity mUserInfo;
-    private String mLastFragment;
-    private static BluetoothDevice mBluetoothDevice;
-
+public class MainFragment extends BaseListFragment{
     private OnJumpToOtherFragmentCallBack mJumpCallBack;
 
     private String[][] mMessageContent = {
             {MainActivity.NAME_DeviceTypeListFragment_JUMP,"搜索周围设备","按类型搜索"},
             {MainActivity.NAME_DeviceHistoryFragment_JUMP,"快速连接","根据历史记录完成连接"}};
-
-    private FloatingActionButton mFab_bottom, mFab_top, mFab_bottom_stop;
 
     private PieChartView chart;
     private PieChartData data;
@@ -62,38 +51,12 @@ public class MainFragment extends ListFragment {
      */
     private MessageItemListAdapter mAdapter;
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param userInfo 用户信息，为空或NULL时代表用户未登录.
-     * @param device 设备信息的序列化
-     * @param lastFragment 跳转源页面.
-     * @return A new instance of fragment WalkFragment.
-     */
-    public static MainFragment newInstance(UserEntity userInfo, BluetoothDevice device, String lastFragment) {
-        MainFragment fragment = new MainFragment();
-        Bundle args = new Bundle();
-        args.putParcelable(ARG_USERINFO, userInfo);
-        args.putParcelable(ARG_DEVICE, device);
-        args.putString(ARG_LASTFRAGMENT, lastFragment);
-        fragment.setArguments(args);
-        return fragment;
-    }
-
     public MainFragment() {
         // Required empty public constructor
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mUserInfo = getArguments().getParcelable(ARG_USERINFO);
-            mBluetoothDevice = getArguments().getParcelable(ARG_DEVICE);
-            mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
-        }
-    }
+    public void onCreate(Bundle savedInstanceState) {super.onCreate(savedInstanceState);}
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -108,11 +71,6 @@ public class MainFragment extends ListFragment {
 
         setListAdapter(mAdapter);
         onCreateList();
-
-        //定义浮动按钮
-        mFab_bottom = (FloatingActionButton) getActivity().findViewById(R.id.fab_bottom);
-        mFab_top = (FloatingActionButton) getActivity().findViewById(R.id.fab_top);
-        mFab_bottom_stop = (FloatingActionButton) getActivity().findViewById(R.id.fab_bottom_stop);
 
         chart = (PieChartView) fragmentView.findViewById(R.id.chart);
         chart.setOnValueTouchListener(new ValueTouchListener());
@@ -145,9 +103,6 @@ public class MainFragment extends ListFragment {
     public void onDetach() {
         super.onDetach();
         mJumpCallBack = null;
-        mFab_top = null;    //注销在fragment下的浮动按钮
-        mFab_bottom = null;
-        mFab_bottom_stop= null;
     }
 
     //------------------------------------------ListView--------------------------------------------

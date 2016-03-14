@@ -21,6 +21,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.tau.blwatch.R;
+import com.tau.blwatch.fragment.base.BaseListFragment;
 import com.tau.blwatch.util.UserEntity;
 
 import java.util.ArrayList;
@@ -35,17 +36,7 @@ import java.util.ArrayList;
  * interface.
  */
 
-public class DeviceListFragment extends ListFragment {
-
-    private static final String	TAG		= "DeviceListFragment";
-
-    private static final String ARG_USERINFO = "userInfo";
-    private static final String ARG_LASTFRAGMENT = "lastFragment";
-    private static final String ARG_DEVICE = "bluetoothDevice";
-
-    private UserEntity mUserInfo;
-    private String mLastFragment;
-    private static BluetoothDevice mBluetoothDevice;
+public class DeviceListFragment extends BaseListFragment {
 
     private OnChooseLeDeviceCallBack mChooseLeDeviceCallBack;
 
@@ -71,8 +62,6 @@ public class DeviceListFragment extends ListFragment {
      */
     private static final long SCAN_PERIOD = 30000; //30秒
 
-    private FloatingActionButton mFab_bottom, mFab_top, mFab_bottom_stop;
-
     private TextView mLeScanInfo;
 
     // Device scan callback.
@@ -97,30 +86,6 @@ public class DeviceListFragment extends ListFragment {
                 }
             };
 
-//    private AdapterView.OnItemClickListener mOnClickListener = new AdapterView.OnItemClickListener() {
-//        public void onItemClick(AdapterView<?> parent, View v, int position, long id){
-//            onListItemClick((ListView) parent, v, position, id);
-//        }
-//    };
-
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param userInfo 用户信息，为空或NULL时代表用户未登录.
-     * @param device 设备信息的序列化
-     * @param lastFragment 跳转源页面.
-     * @return A new instance of fragment WalkFragment.
-     */
-    public static DeviceListFragment newInstance(UserEntity userInfo, BluetoothDevice device, String lastFragment) {
-        DeviceListFragment fragment = new DeviceListFragment();
-        Bundle args = new Bundle();
-        args.putParcelable(ARG_USERINFO, userInfo);
-        args.putParcelable(ARG_DEVICE, device);
-        args.putString(ARG_LASTFRAGMENT, lastFragment);
-        fragment.setArguments(args);
-        return fragment;
-    }
 
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
@@ -143,12 +108,6 @@ public class DeviceListFragment extends ListFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if (getArguments() != null) {
-            mUserInfo = getArguments().getParcelable(ARG_USERINFO);
-            mBluetoothDevice = getArguments().getParcelable(ARG_DEVICE);
-            mLastFragment = getArguments().getString(ARG_LASTFRAGMENT);
-        }
 
         mHandler = new Handler();
         // Use this check to determine whether BLE is supported on the device.  Then you can
@@ -237,9 +196,6 @@ public class DeviceListFragment extends ListFragment {
     public void onDetach() {
         super.onDetach();
         mChooseLeDeviceCallBack = null;
-        mFab_top = null;    //注销在fragment下的浮动按钮
-        mFab_bottom = null;
-        mFab_bottom_stop= null;
     }
 
     @Override
@@ -247,9 +203,7 @@ public class DeviceListFragment extends ListFragment {
         Log.i("onListItemClick","position");
         if (null != mChooseLeDeviceCallBack) {
             final BluetoothDevice device = mAdapter.getDevice(position);
-            if (device == null)
-                return;
-            else
+            if (device != null)
                 mChooseLeDeviceCallBack.onChooseLeDevice(device, mUserInfo);
         }
     }
