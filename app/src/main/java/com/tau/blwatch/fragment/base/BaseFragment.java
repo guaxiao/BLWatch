@@ -19,7 +19,7 @@ import dmax.dialog.SpotsDialog;
 
 /**
  * 一般fragment的基类
- * 实现fragment的工厂模式生产，公用或重复UI组件的控制等
+ * 实现fragment的工厂模式生产，公用UI组件的控制等
  */
 public class BaseFragment extends Fragment {
     protected final String TAG = getClass().getSimpleName();
@@ -35,7 +35,6 @@ public class BaseFragment extends Fragment {
     protected ArrayList<String> mCreateFlag;
     protected String mLastFragment;
 
-    protected View mFragmentView;
     protected FloatingActionButton mFab_bottom, mFab_top, mFab_bottom_stop;
 
     protected static AlertDialog mChartLoadingDialog;
@@ -85,21 +84,11 @@ public class BaseFragment extends Fragment {
 
         //初始化SpotsDialog
         mChartLoadingDialog = new SpotsDialog(getActivity());
-    }
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState){
-        Log.d(TAG,"onCreateView");
-        mFragmentView = inflater.inflate(R.layout.fragment_history, container,
-                false);
 
         //定义浮动按钮
         mFab_bottom = (FloatingActionButton) getActivity().findViewById(R.id.fab_bottom);
         mFab_top = (FloatingActionButton) getActivity().findViewById(R.id.fab_top);
         mFab_bottom_stop = (FloatingActionButton) getActivity().findViewById(R.id.fab_bottom_stop);
-
-        return mFragmentView;
     }
 
     @Override
