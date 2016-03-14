@@ -98,7 +98,7 @@
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:textColor="@color/miGray"
                 android:text="@string/debug_text_updata"
-                android:id="@+id/debug_updata"
+                android:id="@+id/debug_update"
                 android:layout_alignParentTop="true"
                 android:layout_alignParentEnd="true" />
 
@@ -109,7 +109,7 @@
                 android:textColor="@color/miGray"
                 android:text=""
                 android:id="@+id/debug_minheart_cache"
-                android:layout_alignBottom="@+id/debug_updata"
+                android:layout_alignBottom="@+id/debug_update"
                 android:layout_alignParentStart="true" />
 
             <TextView
