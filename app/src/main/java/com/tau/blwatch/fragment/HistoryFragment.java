@@ -104,7 +104,7 @@ public class HistoryFragment extends BaseFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        super.onCreateView(inflater,container,savedInstanceState);
+        View fragmentView = inflater.inflate(R.layout.fragment_history, container, false);
 
         mFab_top.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -116,7 +116,7 @@ public class HistoryFragment extends BaseFragment {
         });
 
         //初始化图表控件
-        chart = (ComboLineColumnChartView) mFragmentView.findViewById(R.id.chart);
+        chart = (ComboLineColumnChartView) fragmentView.findViewById(R.id.chart);
         chart.setOnValueTouchListener(new ValueTouchListener());
         mTagOfChartType = TimeBlockEntity.CHART_TYPE_STEP;
         mTagOfChartTime = TimeBlockEntity.CHART_TIME_DAY;
@@ -125,7 +125,7 @@ public class HistoryFragment extends BaseFragment {
         generateChartThread(mTagOfChartTime, mTagOfChartType);
 
         //构建时间选择控件
-        mTimeRecyclerView = (RecyclerView) mFragmentView.findViewById(R.id.id_recycler_view_of_time);
+        mTimeRecyclerView = (RecyclerView) fragmentView.findViewById(R.id.id_recycler_view_of_time);
         mTimeRecyclerView.setLayoutManager(
                 new LinearLayoutManager(getActivity(), LinearLayout.HORIZONTAL, false));
         mTimeRecyclerAdapter = new LineRecyclerAdapter(
@@ -175,7 +175,7 @@ public class HistoryFragment extends BaseFragment {
         mTimeRecyclerView.setHasFixedSize(true);
 
         //构建类型选择控件
-        mTypeRecyclerView = (RecyclerView) mFragmentView.findViewById(R.id.id_recycler_view_of_type);
+        mTypeRecyclerView = (RecyclerView) fragmentView.findViewById(R.id.id_recycler_view_of_type);
         mTypeRecyclerView.setLayoutManager(
                 new LinearLayoutManager(getActivity(), LinearLayout.HORIZONTAL,false));
         mTypeRecyclerAdapter = new LineRecyclerAdapter(
@@ -217,7 +217,7 @@ public class HistoryFragment extends BaseFragment {
         mTypeRecyclerView.setAdapter(mTypeRecyclerAdapter);
         mTypeRecyclerView.setHasFixedSize(true);
 
-        return mFragmentView;
+        return fragmentView;
     }
 
     @Override

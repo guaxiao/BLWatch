@@ -240,19 +240,19 @@ public class WalkFragment extends BaseFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        super.onCreateView(inflater,container,savedInstanceState);
+        View fragmentView = inflater.inflate(R.layout.fragment_walk, container, false);
 
         //得到容器ViewGroup
 //        mBaseLayout = (FrameLayout) fragmentView.findViewById(R.id.baseLayout_walk);
 
         //定义圆心TextView
-        mCircleCenterTextView = (TextView) mFragmentView.findViewById(R.id.textCircleCenter);
+        mCircleCenterTextView = (TextView) fragmentView.findViewById(R.id.textCircleCenter);
         //定义圆周底部TextView
-        mCircleBottomTextView = (TextView) mFragmentView.findViewById(R.id.textCircleBottom);
+        mCircleBottomTextView = (TextView) fragmentView.findViewById(R.id.textCircleBottom);
         //定义页面底部TextView
-        mFragmentBottomTextView = (TextView) mFragmentView.findViewById(R.id.textFragmentBottom);
+        mFragmentBottomTextView = (TextView) fragmentView.findViewById(R.id.textFragmentBottom);
 
-        mDebugUpdata = (TextView) mFragmentView.findViewById(R.id.debug_updata);
+        mDebugUpdata = (TextView) fragmentView.findViewById(R.id.debug_update);
         mDebugUpdata.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -345,8 +345,8 @@ public class WalkFragment extends BaseFragment {
         }
 
         //设置左下角的设备名与设备地址显示TextView {debug}
-        deRecvDeviceName = (TextView) mFragmentView.findViewById(R.id.textRecvDeviceName);
-        deRecvDeviceAdd = (TextView) mFragmentView.findViewById(R.id.textRecvDeviceAdd);
+        deRecvDeviceName = (TextView) fragmentView.findViewById(R.id.textRecvDeviceName);
+        deRecvDeviceAdd = (TextView) fragmentView.findViewById(R.id.textRecvDeviceAdd);
 
         if(mBluetoothDevice == null){
             Log.d("WalkFragment","mDevice==null");
@@ -422,7 +422,7 @@ public class WalkFragment extends BaseFragment {
                     });
             }
         }
-        return mFragmentView;
+        return fragmentView;
     }
 
     @Override

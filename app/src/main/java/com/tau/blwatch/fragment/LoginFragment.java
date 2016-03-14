@@ -5,7 +5,7 @@ import android.app.AlertDialog;
 import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.v4.app.Fragment;
+import android.support.v4.app.ListFragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -63,10 +63,10 @@ public class LoginFragment extends BaseFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        super.onCreateView(inflater,container,savedInstanceState);
+        View fragmentView = inflater.inflate(R.layout.fragment_login, container, false);
 
-        mUserIdEditText = (EditText)mFragmentView.findViewById(R.id.login_user_id);
-        mUserPWordEditText = (EditText)mFragmentView.findViewById(R.id.login_user_passwd);
+        mUserIdEditText = (EditText)fragmentView.findViewById(R.id.login_user_id);
+        mUserPWordEditText = (EditText)fragmentView.findViewById(R.id.login_user_passwd);
 
         String historyUserName = SharePrefUtil.getString(getActivity(), FormKeyHelper.user_name, null);
         if(historyUserName != null){
@@ -74,7 +74,7 @@ public class LoginFragment extends BaseFragment {
             mUserPWordEditText.requestFocus();
         }
 
-        mLoginButton = (Button)mFragmentView.findViewById(R.id.login_button);
+        mLoginButton = (Button)fragmentView.findViewById(R.id.login_button);
 
         mLoginButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -95,7 +95,7 @@ public class LoginFragment extends BaseFragment {
         });
 
         //TODO：对“注册”与“忘记密码”（或其他功能）占位TextView的功能完善
-        return mFragmentView;
+        return fragmentView;
     }
 
     @Override
