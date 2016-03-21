@@ -97,7 +97,7 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:textColor="@color/miGray"
-                android:text="@string/debug_text_updata"
+                android:text="@string/debug_text_update"
                 android:id="@+id/debug_update"
                 android:layout_alignParentTop="true"
                 android:layout_alignParentEnd="true" />
