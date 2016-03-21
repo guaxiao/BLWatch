@@ -6,14 +6,12 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
 
 import com.tau.blwatch.R;
 import com.tau.blwatch.util.UserEntity;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import dmax.dialog.SpotsDialog;
 
@@ -32,8 +30,8 @@ public class BaseFragment extends Fragment {
 
     protected UserEntity mUserInfo;
     protected static BluetoothDevice mBluetoothDevice;
-    protected ArrayList<String> mCreateFlag;
-    protected String mLastFragment;
+    protected HashMap<Integer,ArrayList<Integer>> mCreateFlag;
+    protected Class mLastFragment;
 
     protected FloatingActionButton mFab_bottom, mFab_top, mFab_bottom_stop;
 
@@ -48,19 +46,19 @@ public class BaseFragment extends Fragment {
      * @param device 设备信息的序列化
      * @param createFlag 页面的其他详细设置
      * @param lastFragment 跳转源页面.
-     * @return A new instance of fragment WalkFragment.
+     * @return A new instance of fragment extends BaseFragment.
      */
     public static <T extends BaseFragment> T newInstance(Class<T> clazz,
                                                          UserEntity userInfo, BluetoothDevice device,
-                                                         ArrayList<String> createFlag, String lastFragment) {
-        Log.d(TAG_THIS,"newInstance from " + clazz.getSimpleName());
+                                                         HashMap<Integer,ArrayList<Integer>> createFlag, Class lastFragment) {
+        Log.d(TAG_THIS, "newInstance from " + clazz.getSimpleName());
         try {
             T fragment = clazz.newInstance();
             Bundle args = new Bundle();
             args.putParcelable(ARG_USER_INFO, userInfo);
             args.putParcelable(ARG_DEVICE, device);
-            args.putStringArrayList(ARG_FLAG, createFlag);
-            args.putString(ARG_LAST_FRAGMENT, lastFragment);
+            args.putSerializable(ARG_FLAG, createFlag);
+            args.putSerializable(ARG_LAST_FRAGMENT, lastFragment);
             fragment.setArguments(args);
             return fragment;
 
@@ -71,6 +69,7 @@ public class BaseFragment extends Fragment {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG,"onCreate");
@@ -78,8 +77,8 @@ public class BaseFragment extends Fragment {
         if (getArguments() != null) {
             mUserInfo = getArguments().getParcelable(ARG_USER_INFO);
             mBluetoothDevice = getArguments().getParcelable(ARG_DEVICE);
-            mCreateFlag = getArguments().getStringArrayList(ARG_FLAG);
-            mLastFragment = getArguments().getString(ARG_LAST_FRAGMENT);
+            mCreateFlag = (HashMap<Integer,ArrayList<Integer>>)getArguments().getSerializable(ARG_FLAG);
+            mLastFragment = (Class)getArguments().getSerializable(ARG_LAST_FRAGMENT);
         }
 
         //初始化SpotsDialog
@@ -99,5 +98,40 @@ public class BaseFragment extends Fragment {
         mFab_top = null;
         mFab_bottom = null;
         mFab_bottom_stop= null;
+    }
+
+    protected void putCreateFlagItem(int key, int item){
+        checkCreateFlag();
+        ArrayList<Integer> flagList = getCreateFlagList(key);
+
+        if(flagList.indexOf(item) != -1)
+            flagList.add(item);
+    }
+
+    protected void addCreateFlagItem(int key, int item){
+        checkCreateFlag();
+        ArrayList<Integer> flagList = getCreateFlagList(key);
+
+        flagList.add(item);
+        mCreateFlag.put(key,flagList);
+    }
+
+    protected boolean hasCreateFlagItem(int key, int item){
+        checkCreateFlag();
+        ArrayList<Integer> flagList = getCreateFlagList(key);
+
+        return (flagList.indexOf(item) != -1);
+    }
+
+    protected void checkCreateFlag(){
+        if(mCreateFlag == null)
+            mCreateFlag = new HashMap<>();
+    }
+
+    protected ArrayList<Integer> getCreateFlagList(int key){
+        if(mCreateFlag.get(key) == null)
+            return new ArrayList<>();
+        else
+            return mCreateFlag.get(key);
     }
 }
