@@ -1,13 +1,9 @@
 package com.tau.blwatch.fragment;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -18,20 +14,20 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.tau.blwatch.R;
+import com.tau.blwatch.callBack.DataBaseTranslator;
+import com.tau.blwatch.callBack.FragmentJumpController;
 import com.tau.blwatch.fragment.base.BaseFragment;
 import com.tau.blwatch.ui.LineRecyclerAdapter;
 import com.tau.blwatch.util.DataBaseSelectHelper;
 import com.tau.blwatch.util.HistoryDBHelper;
 import com.tau.blwatch.util.TimeBlockEntity;
 import com.tau.blwatch.util.TimeHelper;
-import com.tau.blwatch.util.UserEntity;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import dmax.dialog.SpotsDialog;
 import lecho.lib.hellocharts.formatter.SimpleAxisValueFormatter;
 import lecho.lib.hellocharts.gesture.ZoomType;
 import lecho.lib.hellocharts.listener.ComboLineColumnChartOnValueSelectListener;
@@ -49,8 +45,8 @@ import lecho.lib.hellocharts.util.ChartUtils;
 import lecho.lib.hellocharts.view.ComboLineColumnChartView;
 
 public class HistoryFragment extends BaseFragment {
-    private OnJumpToOtherFragmentCallBack mJumpCallBack;
-    private OnSelectDataBaseCallBack mSelectDBCallBack;
+    private FragmentJumpController mFragmentJumpController;
+    private DataBaseTranslator mDataBaseSelector;
 
     private static ComboLineColumnChartView chart;
     private static ComboLineColumnChartData data;
@@ -82,17 +78,17 @@ public class HistoryFragment extends BaseFragment {
     public void onAttach(Activity activity) {
         super.onAttach(activity);
         try {
-            mJumpCallBack = (OnJumpToOtherFragmentCallBack) activity;
+            mFragmentJumpController = (FragmentJumpController) activity;
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString()
-                    + " must implement OnJumpToOtherFragmentCallBack");
+                    + " must implement FragmentJumpController");
         }
 
         try {
-            mSelectDBCallBack = (OnSelectDataBaseCallBack) activity;
+            mDataBaseSelector = (DataBaseTranslator) activity;
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString()
-                    + " must implement OnSelectDataBaseCallBack");
+                    + " must implement DataBaseTranslator");
         }
     }
 
@@ -110,7 +106,7 @@ public class HistoryFragment extends BaseFragment {
             @Override
             public void onClick(View view) {
                 //跳转至设备列表界面
-                mJumpCallBack.onJumpToDeviceList(mBluetoothDevice, mUserInfo);
+                mFragmentJumpController.onJumpToDeviceList(mUserInfo, mBluetoothDevice, mCreateFlag, this.getClass());
                 Log.i("FragmentWList", "From " + this.getClass().getSimpleName());
             }
         });
@@ -232,7 +228,8 @@ public class HistoryFragment extends BaseFragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        mJumpCallBack = null;
+        mFragmentJumpController = null;
+        mDataBaseSelector = null;
     }
 
     //-----------------------------------------helloCharts------------------------------------------
@@ -304,7 +301,7 @@ public class HistoryFragment extends BaseFragment {
 
         //当构建指令未命中缓存时，再向数据库查询数据
         if(!hasCached){
-            tempMap = mSelectDBCallBack.onSelectData(
+            tempMap = mDataBaseSelector.onSelectData(
                     timeBlockEntity.startTime,
                     timeBlockEntity.numBlock,
                     timeBlockEntity.typeTimeBlock,
@@ -608,22 +605,4 @@ public class HistoryFragment extends BaseFragment {
         }
 
     }
-
-    //-----------------------------------------interface--------------------------------------------
-
-    /**
-     * 回调：跳转至其他界面
-     */
-    public interface OnJumpToOtherFragmentCallBack {
-        void onJumpToDeviceList(BluetoothDevice device, UserEntity userInfo);
-    }
-
-    /**
-     * 回调：从数据库中获取相应数据
-     */
-    public interface OnSelectDataBaseCallBack {
-        HashMap<String,ArrayList<Float>> onSelectData(long startTime, int numBlock, String typeTimeBlock, String tableName);
-//        void onSQLTest();
-    }
-
 }

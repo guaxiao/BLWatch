@@ -15,6 +15,7 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.tau.blwatch.R;
+import com.tau.blwatch.callBack.FragmentJumpController;
 import com.tau.blwatch.fragment.base.BaseFragment;
 import com.tau.blwatch.util.UserEntity;
 import com.tau.blwatch.util.UrlHelper;
@@ -33,7 +34,7 @@ import java.security.NoSuchAlgorithmException;
 import dmax.dialog.SpotsDialog;
 
 public class LoginFragment extends BaseFragment {
-    private OnJumpToOtherFragmentCallBack mJumpCallBack;
+    private FragmentJumpController mFragmentJumpController;
 
     private EditText mUserIdEditText,mUserPWordEditText;
     private Button mLoginButton;
@@ -48,10 +49,10 @@ public class LoginFragment extends BaseFragment {
     public void onAttach(Activity activity) {
         super.onAttach(activity);
         try {
-            mJumpCallBack = (OnJumpToOtherFragmentCallBack) activity;
+            mFragmentJumpController = (FragmentJumpController) activity;
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString()
-                    + " must implement OnFragmentInteractionListener");
+                    + " must implement FragmentJumpController");
         }
     }
 
@@ -110,7 +111,7 @@ public class LoginFragment extends BaseFragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        mJumpCallBack = null;
+        mFragmentJumpController = null;
     }
 
     private void onLoginCenter(){
@@ -138,7 +139,8 @@ public class LoginFragment extends BaseFragment {
                         SharePrefUtil.saveString(getActivity(), FormKeyHelper.user_name, mUserName);
                         SharePrefUtil.saveString(getActivity(), FormKeyHelper.user_imageUrl, userImg);
 
-                        mJumpCallBack.onJumpToMainFragment(null, mUserInfo);
+                        //跳转到主界面
+                        mFragmentJumpController.onJumpToMain(mUserInfo, mBluetoothDevice, mCreateFlag, this.getClass());
                     } else {
                         Toast.makeText(getActivity(), jsonObject.getString("message"), Toast.LENGTH_SHORT).show();
                     }
@@ -197,12 +199,4 @@ public class LoginFragment extends BaseFragment {
         return null;
     }
 
-    //-----------------------------------------interface--------------------------------------------
-
-    /**
-     * 回调：跳转至其他界面
-     */
-    public interface OnJumpToOtherFragmentCallBack {
-        void onJumpToMainFragment(BluetoothDevice device, UserEntity userInfo);
-    }
 }

@@ -20,7 +20,10 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.ns.nsbletizhilib.TiZhiGattAttributesHelper;
 import com.tau.blwatch.R;
+import com.tau.blwatch.callBack.BackThreadController;
+import com.tau.blwatch.callBack.FragmentJumpController;
 import com.tau.blwatch.fragment.base.BaseListFragment;
 import com.tau.blwatch.util.UserEntity;
 
@@ -32,13 +35,14 @@ import java.util.ArrayList;
  * Large screen devices (such as tablets) are supported by replacing the ListView
  * with a GridView.
  * <p/>
- * Activities containing this fragment MUST implement the {@link OnChooseLeDeviceCallBack}
- * interface.
+ * Activities containing this fragment MUST implement the {@link FragmentJumpController}
+ * and the {@link BackThreadController} interface.
  */
 
 public class DeviceListFragment extends BaseListFragment {
 
-    private OnChooseLeDeviceCallBack mChooseLeDeviceCallBack;
+    private FragmentJumpController mFragmentJumpController;
+    private BackThreadController mBackThreadController;
 
     /**
      * 设备列表视图
@@ -98,10 +102,17 @@ public class DeviceListFragment extends BaseListFragment {
     public void onAttach(Activity activity) {
         super.onAttach(activity);
         try {
-            mChooseLeDeviceCallBack = (OnChooseLeDeviceCallBack) activity;
+            mFragmentJumpController = (FragmentJumpController) activity;
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString()
-                    + " must implement OnJumpToRegistCallBack");
+                    + " must implement FragmentJumpController");
+        }
+
+        try {
+            mBackThreadController = (BackThreadController) activity;
+        } catch (ClassCastException e) {
+            throw new ClassCastException(activity.toString()
+                    + " must implement BackThreadController");
         }
     }
 
@@ -175,6 +186,7 @@ public class DeviceListFragment extends BaseListFragment {
         // 确保设备上的蓝牙已经打开。若蓝牙当前未打开，则调用 一个系统activity通知提醒用户是否允许启动蓝牙
         if (!mBluetoothAdapter.isEnabled()) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            enableBtIntent.putExtra("LastFragment", this.getClass());
             //跳向通知用户开启蓝牙的系统activity，并在其结束时返回当前activity
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         }
@@ -195,18 +207,30 @@ public class DeviceListFragment extends BaseListFragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        mChooseLeDeviceCallBack = null;
+        mBackThreadController = null;
+        mFragmentJumpController = null;
     }
 
     @Override
     public void onListItemClick(ListView parent, View v, int position, long id) {
         Log.i("onListItemClick","position");
-        if (null != mChooseLeDeviceCallBack) {
+        //若回调实现正常
+        if (null != mBackThreadController && null != mFragmentJumpController) {
+            //获取被选择的设备
             final BluetoothDevice device = mAdapter.getDevice(position);
-            if (device != null)
-                mChooseLeDeviceCallBack.onChooseLeDevice(device, mUserInfo);
+            //若选择的设备不为空
+            if (device != null) {
+                //若此已选择设备,且设备发生更新时
+                if(mBluetoothDevice != null && !device.equals(mBluetoothDevice)){
+                    //注销原设备的监听
+                    mBackThreadController.onBackThreadDestroy();
+                }
+                //不论原设备情况如何，均跳转至Walk界面
+                mFragmentJumpController.onJumpToWalk(mUserInfo, mBluetoothDevice, mCreateFlag, this.getClass());
+            }
         }
     }
+
 
     /**
      * The default content for this Fragment has a TextView that is shown when
@@ -231,6 +255,7 @@ public class DeviceListFragment extends BaseListFragment {
             // 确保设备上的蓝牙已经打开。若蓝牙当前未打开，则调用 一个系统activity通知提醒用户是否允许启动蓝牙
             if (!mBluetoothAdapter.isEnabled()) {
                 Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                enableBtIntent.putExtra("LastFragment", this.getClass());
                 //跳向通知用户开启蓝牙的系统activity，并在其结束时返回当前activity
                 startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
             }
@@ -344,21 +369,13 @@ public class DeviceListFragment extends BaseListFragment {
 
                 viewHolder.deviceAddress.setText(device.getAddress());
             }else{
-                viewHolder.deviceName.setText(R.string.warning_list_item_title);
-                viewHolder.deviceAddress.setText(R.string.warning_list_item_content);
+                viewHolder.deviceName.setText(R.string.warning_text);
+                viewHolder.deviceAddress.setText(R.string.warning_text);
                 Log.e(TAG,"listView get null item");
             }
 
 
             return view;
         }
-    }
-
-
-    /**
-     * 回调：选择了蓝牙设备
-     */
-    public interface OnChooseLeDeviceCallBack {
-        void onChooseLeDevice(BluetoothDevice device, UserEntity userInfo);
     }
 }

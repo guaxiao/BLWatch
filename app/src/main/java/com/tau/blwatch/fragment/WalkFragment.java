@@ -30,8 +30,11 @@ import com.ns.nsbletizhilib.TiZhiData;
 import com.ns.nsbletizhilib.TiZhiGattAttributesHelper;
 import com.tau.blwatch.MainActivity;
 import com.tau.blwatch.R;
+import com.tau.blwatch.callBack.DataBaseTranslator;
+import com.tau.blwatch.callBack.FragmentJumpController;
 import com.tau.blwatch.fragment.base.BaseFragment;
 import com.tau.blwatch.util.BluetoothLeService;
+import com.tau.blwatch.util.DataBaseSelectHelper;
 import com.tau.blwatch.util.FormKeyHelper;
 import com.tau.blwatch.util.UserEntity;
 import com.tau.blwatch.util.UrlHelper;
@@ -62,13 +65,12 @@ public class WalkFragment extends BaseFragment {
     private static final String DEVICE_NSW04 = "NS-W04";
     private static final String DEVICE_MI1S = "MI1S";
 
-    private OnJumpToOtherFragmentCallBack mJumpCallBack;
-    private OnSqlIOCallBack mSqlIOCallBack;
+    private FragmentJumpController mFragmentJumpController;
+    private DataBaseTranslator mDataBaseTranslator;
 
     private ArrayList<ArrayList<BluetoothGattCharacteristic>>
             mGattCharacteristics = new ArrayList<ArrayList<BluetoothGattCharacteristic>>();// 蓝牙协议特征
     private BluetoothLeService mBluetoothLeService;
-    private BluetoothGattCharacteristic mNotifyCharacteristic;
     private boolean mConnected = false;//设备链接状态，默认未连接
 
     private MiBand MiBandConnectHelper = new MiBand(getActivity());
@@ -87,7 +89,6 @@ public class WalkFragment extends BaseFragment {
     private final String LIST_NAME = "NAME";
     private final String LIST_UUID = "UUID";
 
-//    private FrameLayout mBaseLayout;
     private static TextView mCircleCenterTextView, mCircleBottomTextView, mFragmentBottomTextView;
     private static TextView deRecvDeviceName, deRecvDeviceAdd;
 
@@ -213,16 +214,16 @@ public class WalkFragment extends BaseFragment {
     public void onAttach(Activity activity) {
         super.onAttach(activity);
         try {
-            mJumpCallBack = (OnJumpToOtherFragmentCallBack) activity;
+            mFragmentJumpController = (FragmentJumpController) activity;
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString()
-                    + " must implement OnJumpToOtherFragmentCallBack");
+                    + " must implement FragmentJumpController");
         }
         try {
-            mSqlIOCallBack = (OnSqlIOCallBack) activity;
+            mDataBaseTranslator = (DataBaseTranslator) activity;
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString()
-                    + " must implement OnSqlIOCallBack");
+                    + " must implement DataBaseTranslator");
         }
     }
 
@@ -271,7 +272,7 @@ public class WalkFragment extends BaseFragment {
             public void onClick(View view) {
                 if(mBluetoothDevice == null){
                     //跳转至设备列表界面
-                    mJumpCallBack.onJumpToDeviceList(null, mUserInfo);
+                    mFragmentJumpController.onJumpToDeviceList(mUserInfo, null, mCreateFlag, this.getClass());
                     Log.d("FragmentWList","From " + this.getClass().getSimpleName());
                 }else{
                     if (mBluetoothDevice.getName() != null)
@@ -305,7 +306,7 @@ public class WalkFragment extends BaseFragment {
 
                 if(mBluetoothDevice == null){
                     //跳转至设备列表界面
-                    mJumpCallBack.onJumpToDeviceList(null, mUserInfo);
+                    mFragmentJumpController.onJumpToDeviceList(mUserInfo, null, mCreateFlag, this.getClass());
                     Log.d("FragmentWList","From " + this.getClass().getSimpleName());
                 }else{
                     switch (mBluetoothDevice.getName()){
@@ -322,13 +323,13 @@ public class WalkFragment extends BaseFragment {
 //                                MiBandConnectHelper.disableSensorDataNotify();
                             } else{
                                 //跳转至设备列表界面
-                                mJumpCallBack.onJumpToDeviceList(null, mUserInfo);
+                                mFragmentJumpController.onJumpToDeviceList(mUserInfo, null, mCreateFlag, this.getClass());
                                 Log.d("FragmentWList","From " + this.getClass().getSimpleName());
                             }
                             break;
                     }
                     //跳转至历史统计界面
-                    mJumpCallBack.onJumpToHistoryTable(mBluetoothDevice, mUserInfo);
+                    mFragmentJumpController.onJumpToHistory(mUserInfo, mBluetoothDevice, mCreateFlag, this.getClass());
                 }
             }
         });
@@ -336,7 +337,7 @@ public class WalkFragment extends BaseFragment {
 
          //从设备列表选择了设备跳转而来，则进行自动连接
         if(mBluetoothDevice != null && mLastFragment != null
-                && mLastFragment.equals(MainActivity.NAME_DeviceListFragment_JUMP)){
+                && mLastFragment.equals(WalkFragment.class)){
             isAtomConnect = true;
             mFab_bottom_stop.show();
             Toast.makeText(getActivity(), "Data Exchange Atom", Toast.LENGTH_SHORT).show();
@@ -447,8 +448,8 @@ public class WalkFragment extends BaseFragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        mJumpCallBack = null;  //注销设备列表回调
-        mSqlIOCallBack = null;  //注销SQL-IO回调
+        mFragmentJumpController = null;  //注销设备列表回调
+        mDataBaseTranslator = null;  //注销SQL-IO回调
 
         MiBandConnectHelper = null;
     }
@@ -481,7 +482,7 @@ public class WalkFragment extends BaseFragment {
                         mDebugMaxHeart.setText(Float.toString(cacheMaxHeart));
                         mDebugMinHeart.setText(Float.toString(cacheMinHeart));
 
-                        mSqlIOCallBack.onSendHeartToDB(
+                        mDataBaseTranslator.onSendHeartToDB(
                                 heartValue, simulateMaxHeart, simulateMinHeart); //通过回调经由activity上传数据库
                     }catch (java.lang.NumberFormatException e){
                         Log.d("IntegerCatch","data");//将不是数字的报文忽略
@@ -503,7 +504,7 @@ public class WalkFragment extends BaseFragment {
 
                         mDebugStepCache.setText(Integer.toString(cacheStep));
 
-                        mSqlIOCallBack.onSendStepToDB(Integer.parseInt(data)); //通过回调经由activity上传数据库
+                        mDataBaseTranslator.onSendStepToDB(Integer.parseInt(data)); //通过回调经由activity上传数据库
                     }catch (java.lang.NumberFormatException e){
                         Log.d("IntegerCatch","data");//将不是数字的报文忽略
                     }
@@ -542,11 +543,8 @@ public class WalkFragment extends BaseFragment {
                     }
 
                     //上传设定数据
-                    if ((charaProp | BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
-                        mNotifyCharacteristic = characteristic;
-                        mBluetoothLeService.setCharacteristicNotification(
-                                characteristic, data, true);
-                    }
+                    if ((charaProp | BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0)
+                        mBluetoothLeService.setCharacteristicNotification(characteristic, data, true);
                 }
             }
         });
@@ -558,7 +556,7 @@ public class WalkFragment extends BaseFragment {
     // Demonstrates how to iterate through the supported GATT
     // Services/Characteristics.
     private void displayGattServices(List<BluetoothGattService> gattServices) {
-        Log.d("WalkFragment","displayGattServices");
+        Log.d("WalkFragment", "displayGattServices");
         if (gattServices == null)
             return;
         String uuid;
@@ -622,7 +620,7 @@ public class WalkFragment extends BaseFragment {
 
                                     Log.d("onTiZhiDataReceived", data.toString());
 
-                                    mSqlIOCallBack.onSendWeightToDB(formattedWeight);
+                                    mDataBaseTranslator.onSendWeightToDB(formattedWeight);
                                 }
 
                                 /**
@@ -683,20 +681,12 @@ public class WalkFragment extends BaseFragment {
         MiBandConnectHelper.enableRealtimeStepsNotify();
     }
 
-    /**
-     * 回调：跳转至设备列表界面
-     */
-    public interface OnJumpToOtherFragmentCallBack {
-        void onJumpToDeviceList(BluetoothDevice device, UserEntity userInfo);
-        void onJumpToHistoryTable(BluetoothDevice device, UserEntity userInfo);
-    }
+    //-----------------------------------------interface--------------------------------------------
 
     /**
      * 回调：与数据库进行交互
      */
     public interface OnSqlIOCallBack {
-        void onSendHeartToDB(int avgHeart, int maxHeart, int minHeart);
-        void onSendStepToDB(int countStep);
-        void onSendWeightToDB(double countWeight);
+
     }
 }
