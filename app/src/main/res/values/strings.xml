@@ -16,6 +16,7 @@
     <string name="nav_walk_title">健身</string>
     <string name="nav_history_title">历史</string>
     <string name="nav_watch_list_title">设备列表</string>
+    <string name="nav_deveice_type_list_title">设备列表</string>
     <string name="nav_manage_title">设置</string>
     <string name="nav_share_title">分享</string>
 
@@ -26,7 +27,7 @@
     <string name="ble_not_supported">err:设备不支持BLE</string>
     <string name="bluetooth_not_supported">err:设备不支持蓝牙</string>
 
-    <string name="le_scan_active">扫描中...</string>
+    <string name="le_scan_active">扫描中…</string>
     <string name="device_null">未连接设备</string>
 
     <string name="heart_calculating">测量中</string>
@@ -46,8 +47,19 @@
 
     <string name="description_login_logo_image">应用LOGO</string>
 
-    <string name="warning_list_item_title">N/A</string>
-    <string name="warning_list_item_content">N/A</string>
+    <string name="warning_text">N/A</string>
+    <string name="nil_text"> </string>
 
-    <string name="debug_text_updata">手动上传缓存数据</string>
+    <string name="debug_text_update">手动上传缓存数据</string>
+
+    <string name="table_device_type">table_设备类型</string>
+    <string name="mi_band_name">小米手环</string>
+    <string name="ptwatch_name">中弘腕表</string>
+    <string name="ptscale_name">中弘体脂秤</string>
+
+    <string name="main_list_title_search">搜索周围设备</string>
+    <string name="main_list_title_history">快速连接</string>
+
+    <string name="main_list_gist_search">按类型搜索</string>
+    <string name="main_list_gist_history">根据历史记录完成连接</string>
 </resources>
