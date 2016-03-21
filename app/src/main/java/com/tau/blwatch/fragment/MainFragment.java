@@ -17,11 +17,13 @@ import android.widget.Toast;
 
 import com.tau.blwatch.MainActivity;
 import com.tau.blwatch.R;
+import com.tau.blwatch.callBack.FragmentJumpController;
 import com.tau.blwatch.fragment.base.BaseListFragment;
 import com.tau.blwatch.util.UserEntity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import lecho.lib.hellocharts.listener.PieChartOnValueSelectListener;
 import lecho.lib.hellocharts.model.PieChartData;
@@ -33,11 +35,13 @@ import lecho.lib.hellocharts.view.PieChartView;
 //TODO：完善饼图关于每日步数目标与已完成步数的显示
 
 public class MainFragment extends BaseListFragment{
-    private OnJumpToOtherFragmentCallBack mJumpCallBack;
+    private FragmentJumpController mFragmentJumpController;
 
-    private String[][] mMessageContent = {
-            {MainActivity.NAME_DeviceTypeListFragment_JUMP,"搜索周围设备","按类型搜索"},
-            {MainActivity.NAME_DeviceHistoryFragment_JUMP,"快速连接","根据历史记录完成连接"}};
+    private int[][] mMessageContent = {
+            {R.string.main_list_title_search,R.string.main_list_gist_search},
+            {R.string.main_list_title_history,R.string.main_list_gist_history}};
+
+    private static final int DEFAULT_R_VALUE = -1;
 
     private PieChartView chart;
     private PieChartData data;
@@ -92,17 +96,17 @@ public class MainFragment extends BaseListFragment{
     public void onAttach(Activity activity) {
         super.onAttach(activity);
         try {
-            mJumpCallBack = (OnJumpToOtherFragmentCallBack) activity;
+            mFragmentJumpController = (FragmentJumpController) activity;
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString()
-                    + " must implement OnChooseMessageItemCallBack");
+                    + " must implement FragmentJumpController");
         }
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
-        mJumpCallBack = null;
+        mFragmentJumpController = null;
     }
 
     //------------------------------------------ListView--------------------------------------------
@@ -120,8 +124,8 @@ public class MainFragment extends BaseListFragment{
         });
 
         //添加静态的list内容
-        for(String[] content:mMessageContent)
-            mAdapter.addDevice(new MainMessageItem(content[0],content[1],content[2]));
+        for(int[] content:mMessageContent)
+            mAdapter.addDevice(new MainMessageItem(content[0],content[1]));
 
         mAdapter.notifyDataSetChanged();
     }
@@ -129,17 +133,17 @@ public class MainFragment extends BaseListFragment{
     @Override
     public void onListItemClick(ListView parent, View v, int position, long id) {
         Log.i("onListItemClick", "position");
-        if (null != mJumpCallBack) {
+        if (null != mFragmentJumpController) {
             final MainMessageItem messageItem = (MainMessageItem)mAdapter.getItem(position);
             if (messageItem == null)
                 return;
             else{
-                switch (messageItem.getFragmentName()){
-                    case MainActivity.NAME_DeviceTypeListFragment_JUMP:
-                        mJumpCallBack.onJumpToDeviceTypeList(mBluetoothDevice, mUserInfo);
+                switch (messageItem.getMsgTitle()){
+                    case R.string.main_list_title_search:
+                        mFragmentJumpController.onJumpToDeviceTypeList(mUserInfo, mBluetoothDevice, mCreateFlag, this.getClass());
                         break;
-                    case MainActivity.NAME_DeviceHistoryFragment_JUMP:
-                        mJumpCallBack.onJumpToDeviceHistory(mBluetoothDevice, mUserInfo);
+                    case R.string.main_list_title_history:
+                        mFragmentJumpController.onJumpToDeviceHistory(mUserInfo, mBluetoothDevice, mCreateFlag, this.getClass());
                         break;
                 }
             }
@@ -212,28 +216,39 @@ public class MainFragment extends BaseListFragment{
         @Override
         public View getView(int i, View view, ViewGroup viewGroup) {
             ViewHolder viewHolder;
-            // General ListView optimization code.
+            //若此view不为空
             if (view == null) {
+                //将view替代为自定义item
                 view = mInflater.inflate(R.layout.listitem_main, null);
+                //使用ViewHolder获取并控制自定义item中的各个控件
                 viewHolder = new ViewHolder();
                 viewHolder.messageGist = (TextView) view.findViewById(R.id.message_gist);
                 viewHolder.messageTitle = (TextView) view.findViewById(R.id.message_title);
+                //将ViewHolder装入item
                 view.setTag(viewHolder);
             } else {
+                //若view为空则装入默认的tag
                 viewHolder = (ViewHolder) view.getTag();
             }
 
-            MainMessageItem fragmentName = mMsgItem.get(i);
-            if(fragmentName != null){
-                if (fragmentName.getMsgTitle() != null && fragmentName.getMsgTitle().length() > 0)
-                    viewHolder.messageTitle.setText(fragmentName.getMsgTitle());
-                else
-                    viewHolder.messageTitle.setText(R.string.unknown_device);
+            //获取相应标号的MainMessageItem
+            MainMessageItem mainMessageItem = mMsgItem.get(i);
+            //若item信息不为空
+            if(mainMessageItem != null){
+                //若item的title非缺省，则装入定义好了的title
+                if (mainMessageItem.getMsgTitle() != DEFAULT_R_VALUE)
+                    viewHolder.messageTitle.setText(mainMessageItem.getMsgTitle());
+                else    //否则标记title为缺省
+                    viewHolder.messageTitle.setText(R.string.warning_text);
 
-                viewHolder.messageGist.setText(fragmentName.getMsgGist());
-            }else{
-                viewHolder.messageTitle.setText(R.string.warning_list_item_title);
-                viewHolder.messageGist.setText(R.string.warning_list_item_content);
+                //若item的gist非缺省，则装入定义好了的title
+                if(mainMessageItem.getMsgGist() != DEFAULT_R_VALUE)
+                    viewHolder.messageGist.setText(mainMessageItem.getMsgGist());
+                else    //否则标记gist为缺省
+                    viewHolder.messageGist.setText(R.string.nil_text);
+            }else{  //若item信息为空，则将title与gist标记为缺省
+                viewHolder.messageTitle.setText(R.string.warning_text);
+                viewHolder.messageGist.setText(R.string.nil_text);
                 Log.e(TAG, "listView get null item");
             }
             return view;
@@ -241,37 +256,28 @@ public class MainFragment extends BaseListFragment{
     }
 
     public class MainMessageItem{
-        private String fragmentName;
-        private String msgTitle;
-        private String msgGist;
+        private int msgTitle = DEFAULT_R_VALUE;
+        private int msgGist = DEFAULT_R_VALUE;
 
-        public MainMessageItem(String fragmentName, String msgTitle, String msgGist){
-            this.fragmentName = fragmentName;
+        public MainMessageItem(int msgTitle, int msgGist){
             this.msgTitle = msgTitle;
             this.msgGist = msgGist;
         }
 
-        public String getFragmentName() {
-            return fragmentName;
-        }
-
-        public void setFragmentName(String fragmentName) {
-            this.fragmentName = fragmentName;
-        }
-
-        public String getMsgTitle() {
+        public int getMsgTitle() {
             return msgTitle;
         }
 
-        public void setMsgTitle(String msgTitle) {
+        public void setMsgTitle(int msgTitle) {
             this.msgTitle = msgTitle;
         }
 
-        public String getMsgGist() {
+        public int getMsgGist() {
             return msgGist;
         }
 
-        public void setMsgGist(String msgGist) {
+
+        public void setMsgGist(int msgGist) {
             this.msgGist = msgGist;
         }
     }
@@ -335,17 +341,5 @@ public class MainFragment extends BaseListFragment{
 
         }
 
-    }
-
-    //-----------------------------------------interface--------------------------------------------
-
-    /**
-     * 回调：跳转至其他界面
-     */
-    public interface OnJumpToOtherFragmentCallBack {
-        void onJumpToDeviceList(BluetoothDevice device, UserEntity userInfo);
-        void onJumpToHistoryTable(BluetoothDevice device, UserEntity userInfo);
-        void onJumpToDeviceTypeList(BluetoothDevice device, UserEntity userInfo);
-        void onJumpToDeviceHistory(BluetoothDevice device, UserEntity userInfo);
     }
 }
