@@ -1,5 +1,7 @@
 package com.tau.blwatch.util;
 
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -7,12 +9,18 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import com.tau.blwatch.R;
+import com.tau.blwatch.callBack.BackThreadController;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Random;
 
+import dmax.dialog.SpotsDialog;
+
 public class HistoryDBHelper extends SQLiteOpenHelper {
+    private Context rootContext;
 
     private final static String DATABASE_NAME = "HistoryData.db";
     private final static int DATABASE_VERSION = 1;
@@ -20,17 +28,20 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     public final static String STEP_TABLE_NAME = "step_table";
     public final static String WEIGHT_TABLE_NAME = "weight_table";
     public final static String DEVICE_HISTORY_TABLE_NAME = "device_history_table";
+    public final static String DEVICE_TYPE_TABLE_NAME = "device_type_table";
 
-    private final static String INFO_ID = "id";
-    private final static String INFO_TIME = "time";
-    private final static String INFO_DEVICE_ADD = "device_add";
-    private final static String INFO_DEVICE_NAME = "device_name";
-    private final static String INFO_DEVICE_TYPE = "device_type";
-    private final static String AVG_HEART = "avg_heart";
-    private final static String MAX_HEART = "max_heart";
-    private final static String MIN_HEART = "min_heart";
-    private final static String VALUE_STEP = "value_step";
-    private final static String VALUE_WEIGHT = "value_weight";
+    public final static String INFO_ID = "id";
+    public final static String INFO_TIME = "time";
+    public final static String INFO_DEVICE_ADD = "device_add";
+    public final static String INFO_DEVICE_NAME = "device_name";
+    public final static String INFO_DEVICE_TYPE = "device_type";
+    public final static String INFO_DEVICE_ADD_START = "device_add_start";
+    public final static String INFO_DEVICE_ADD_END = "device_add_end";
+    public final static String AVG_HEART = "avg_heart";
+    public final static String MAX_HEART = "max_heart";
+    public final static String MIN_HEART = "min_heart";
+    public final static String VALUE_STEP = "value_step";
+    public final static String VALUE_WEIGHT = "value_weight";
 
     public final static String ARG_TIME_BLOCK = "time_block";
 
@@ -46,11 +57,13 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     public final static String sDeviceAdd_TPTWATCH = "00:2C:00:00:00:FF";
     public final static String sDeviceAdd_TPTESc = "00:2D:00:00:00:FF";
     public final static String sDeviceAdd_TMI1S = "00:1C:00:00:00:FF";
+    public final static String sDeviceAdd_START = "00:00:00:00:00:00";
+    public final static String sDeviceAdd_END = "FF:FF:FF:FF:FF:FF";
     public final static long sTestIntervals =  5 * 60 * 1000;   //测试数据数据库计入间隔5分钟
     public final static long sHeartAndStepIntervals = 5 * 60 * 1000;   //心跳数据库计入间隔5分钟
     public final static long sWeightIntervals = 8 * 60 * 60 * 1000; //体重数据库计入间隔8小时
-    public final static long sSumTime = (long)365 * 24 * 3600 * 1000; //模拟注入时间跨度一年
-    public final static long sObligateTime = (long)180 * 24 * 3600 * 1000; //模拟预留注入时间180天
+    public final static long sSumTime = (long)365 * 24 * 3600 * 1000; //模拟历史数据注入，从一年前开始
+    public final static long sObligateTime = (long)180 * 24 * 3600 * 1000; //模拟未来数据注入，注入到180天后
 
 //    public final static long sSumTime = (long)12 * 3600 * 1000; //模拟注入时间跨度12h
 //    public final static long sObligateTime = (long)0 * 24 * 3600 * 1000; //模拟预留注入时间0
@@ -70,12 +83,13 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     public HistoryDBHelper(Context context, String name, SQLiteDatabase.CursorFactory factory,
                            int version) {
         super(context, name, factory, version);
+        rootContext = context;
     }
 
     //免于dbName与版本号的简易构造方法
     public HistoryDBHelper(Context context) {
         // TODO Auto-generated constructor stub
-        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        this(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
     //版本变更
@@ -89,15 +103,14 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         //创建表记录心跳
         createTable(db, HEART_TABLE_NAME);
-
         //创建表记录步数
         createTable(db, STEP_TABLE_NAME);
-
         //创建表记录体重
         createTable(db, WEIGHT_TABLE_NAME);
-
         //创建表记录设备历史
         createTable(db, DEVICE_HISTORY_TABLE_NAME);
+        //创建表记录设备类型与对应的MAC地址段
+        createTable(db, DEVICE_TYPE_TABLE_NAME);
     }
 
     public void createTable(SQLiteDatabase db, String tableName){
@@ -127,11 +140,19 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
                         VALUE_WEIGHT + " INTEGER " + ");";
                 break;
             case DEVICE_HISTORY_TABLE_NAME:
-                sql = "CREAT TABLE " + DEVICE_HISTORY_TABLE_NAME + "(" +
+                sql = "CREATE TABLE " + DEVICE_HISTORY_TABLE_NAME + "(" +
                         INFO_DEVICE_ADD + " TEXT " + "primary key," +
                         INFO_DEVICE_NAME + " TEXT ," +
                         INFO_DEVICE_TYPE + " TEXT ," +
-                        INFO_TIME + "INTEGER" + ");";
+                        INFO_TIME + " INTEGER " + ");";
+                break;
+            case DEVICE_TYPE_TABLE_NAME:
+                sql = "CREATE TABLE " + DEVICE_TYPE_TABLE_NAME + "(" +
+                        INFO_ID + " INTEGER " + "primary key autoincrement," +
+                        INFO_DEVICE_NAME + " TEXT ," +
+                        INFO_DEVICE_TYPE + " TEXT ," +
+                        INFO_DEVICE_ADD_START + " TEXT ," +
+                        INFO_DEVICE_ADD_END + " TEXT " + ");";
                 break;
         }
 
@@ -161,8 +182,7 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         cv.put(AVG_HEART, heartDAvg);
         cv.put(MAX_HEART, heartDMax);
         cv.put(MIN_HEART, heartDMin);
-        long row = db.insert(HEART_TABLE_NAME, null, cv);
-        return row;
+        return db.insert(HEART_TABLE_NAME, null, cv);
     }
 
     //增加步数数据
@@ -173,8 +193,7 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         cv.put(INFO_TIME, writeTime / SQLITE_DATE_PER_JAVA_DATE);
         cv.put(INFO_DEVICE_ADD, deviceAdd);
         cv.put(VALUE_STEP, stepValue);
-        long row = db.insert(STEP_TABLE_NAME, null, cv);
-        return row;
+        return db.insert(STEP_TABLE_NAME, null, cv);
     }
 
     //增加体重数据
@@ -184,9 +203,8 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         ContentValues cv = new ContentValues();
         cv.put(INFO_TIME, writeTime / SQLITE_DATE_PER_JAVA_DATE);
         cv.put(INFO_DEVICE_ADD, deviceAdd);
-        cv.put(VALUE_WEIGHT, (int)(weightValue * 100) / 100d);
-        long row = db.insert(WEIGHT_TABLE_NAME, null, cv);
-        return row;
+        cv.put(VALUE_WEIGHT, (int) (weightValue * 100) / 100d);
+        return db.insert(WEIGHT_TABLE_NAME, null, cv);
     }
 
     //增加设备历史数据
@@ -198,8 +216,7 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         cv.put(INFO_DEVICE_ADD, deviceAdd);
         cv.put(INFO_DEVICE_NAME, deviceName);
         cv.put(INFO_DEVICE_TYPE, deviceType);
-        long row = db.insert(WEIGHT_TABLE_NAME, null, cv);
-        return row;
+        return db.insert(DEVICE_HISTORY_TABLE_NAME, null, cv);
     }
 
 
@@ -207,7 +224,16 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         return 0;
     }
 
-
+    public long insertDeviceType(String deviceName, String deviceType, String deviceAddStrat, String deviceAddEnd){
+        SQLiteDatabase db = this.getWritableDatabase();
+        /* ContentValues */
+        ContentValues cv = new ContentValues();
+        cv.put(INFO_DEVICE_NAME, deviceName);
+        cv.put(INFO_DEVICE_TYPE, deviceType);
+        cv.put(INFO_DEVICE_ADD_START, deviceAddStrat);
+        cv.put(INFO_DEVICE_ADD_END, deviceAddEnd);
+        return db.insert(DEVICE_TYPE_TABLE_NAME, null, cv);
+    }
 
     public Cursor selectData(String tableName){
         //当tableName为空或者不为设备列表table时
@@ -217,10 +243,22 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
 
         //参数验证合法后
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery(
+        return db.rawQuery(
                 "SELECT * FROM " + DEVICE_HISTORY_TABLE_NAME, null);
+    }
 
-        return cursor;
+    public Cursor selectData(String deviceType, String tableName){
+        if(deviceType == null)  return null;
+        //当tableName为空或者不为设备类型table时
+        if(tableName == null
+                || tableName.equals(DEVICE_TYPE_TABLE_NAME))
+            return null;
+
+        //参数验证合法后
+        SQLiteDatabase db = this.getWritableDatabase();
+        return db.rawQuery(
+                "SELECT * FROM " + DEVICE_TYPE_TABLE_NAME +
+                        "WHERE " + INFO_DEVICE_TYPE + "=" + deviceType, null);
     }
     /**
      * 按时间区间查询数据
@@ -235,19 +273,22 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         //当typeTime为空或者不为已有日期格式输入之一时
         if(typeTimeBlock == null
                 || !(typeTimeBlock.equals(TYPE_BLOCK_DAY)
-                || typeTimeBlock.equals(TYPE_BLOCK_HOUR)
-                || typeTimeBlock.equals(TYPE_BLOCK_WEEK )
-                || typeTimeBlock.equals(TYPE_BLOCK_MONTH)))
+                    || typeTimeBlock.equals(TYPE_BLOCK_HOUR)
+                    || typeTimeBlock.equals(TYPE_BLOCK_WEEK )
+                    || typeTimeBlock.equals(TYPE_BLOCK_MONTH)))
             return null;
-        //当tableName为空时
-        if(tableName == null)
+        //当tableName为空或不为心跳、步数、体重表之一时
+        if(tableName == null
+                || !(tableName.equals(HEART_TABLE_NAME)
+                    ||tableName.equals(STEP_TABLE_NAME)
+                    ||tableName.equals(WEIGHT_TABLE_NAME)))
             return null;
 
         //验证参数合法后
         startTime /= SQLITE_DATE_PER_JAVA_DATE;
         endTime /= SQLITE_DATE_PER_JAVA_DATE;
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = null;
+        Cursor cursor;
 
         switch (tableName){
             case HEART_TABLE_NAME:  //查询心率
@@ -309,6 +350,8 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         resetTable(HEART_TABLE_NAME);
         resetTable(STEP_TABLE_NAME);
         resetTable(WEIGHT_TABLE_NAME);
+        resetTable(DEVICE_TYPE_TABLE_NAME);
+        resetTable(DEVICE_HISTORY_TABLE_NAME);
     }
 
     /**
@@ -321,9 +364,44 @@ public class HistoryDBHelper extends SQLiteOpenHelper {
         writeTime = new Date().getTime();
         db.beginTransaction();  //手动设置开始事务
 
-        insertDeviceHistory(writeTime, "00:FF:FF:FF:F0:FF", "T*PTWatch", "中弘腕表");
-        insertDeviceHistory(writeTime, "00:FF:FF:FF:F1:FF", "T*PTESc", "中弘电子称");
-        insertDeviceHistory(writeTime, "00:FF:FF:FF:F2:FF", "T*PTMI1S", "小米手环");
+        insertDeviceHistory(writeTime, sDeviceAdd_TPTWATCH,
+                rootContext.getString(R.string.initial_test_ptwatch),
+                rootContext.getString(R.string.name_ptwatch));
+        insertDeviceHistory(writeTime, sDeviceAdd_TPTESc,
+                rootContext.getString(R.string.initial_test_ptscale),
+                rootContext.getString(R.string.name_ptscale));
+        insertDeviceHistory(writeTime, sDeviceAdd_TMI1S,
+                rootContext.getString(R.string.initial_test_mi_band),
+                rootContext.getString(R.string.name_mi_band));
+
+        db.setTransactionSuccessful();        //设置事务处理状态至成功，不设置会自动回滚不提交
+        db.endTransaction();        //处理完成
+    }
+
+    /**
+     *  模拟设备类型的缺省表
+     */
+    public void simulateDeviceType(){
+        final SQLiteDatabase db = this.getWritableDatabase();
+        resetTable(DEVICE_TYPE_TABLE_NAME);
+
+        db.beginTransaction();  //手动设置开始事务
+
+        insertDeviceType(rootContext.getString(R.string.name_mi_band),
+                rootContext.getString(R.string.initial_test_mi_band),
+                sDeviceAdd_START,
+                sDeviceAdd_END);
+        insertDeviceType(rootContext.getString(R.string.name_ptscale),
+                rootContext.getString(R.string.initial_test_ptscale),
+                sDeviceAdd_START,
+                sDeviceAdd_END);
+        insertDeviceType(rootContext.getString(R.string.name_ptwatch),
+                rootContext.getString(R.string.initial_test_ptwatch),
+                sDeviceAdd_START,
+                sDeviceAdd_END);
+
+        db.setTransactionSuccessful();        //设置事务处理状态至成功，不设置会自动回滚不提交
+        db.endTransaction();        //处理完成
     }
 
     /**
