@@ -17,4 +17,7 @@ public class UrlHelper {
     public static final String LOGIN_LOCAL_ROOT = "taunioned_test";
     public static final String LOGIN_LOCAL_ROOT_PW = "taunionotto";
     public static final String LOGIN_LOCAL_ROOT_PHONE = "18366000000";
+
+    public static final String LOGIN_OFFLINE = "offline";
+    public static final String LOGIN_OFFLINE_PW = "offline";
 }

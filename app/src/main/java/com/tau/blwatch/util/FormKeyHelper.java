@@ -8,6 +8,7 @@ public class FormKeyHelper {
     public static final String user_password = "password";
     public static final String user_imageUrl = "imageUrl";
     public static final String is_login = "isLogin";
+    public static final String is_offline = "isOffline";
     public static final String bluetooth_address = "Bluetooth";
     public static final String upload_user_id = "userid";
     public static final String upload_step = "Step";

@@ -34,8 +34,6 @@ import java.security.NoSuchAlgorithmException;
 import dmax.dialog.SpotsDialog;
 
 public class LoginFragment extends BaseFragment {
-    private FragmentJumpController mFragmentJumpController;
-
     private EditText mUserIdEditText,mUserPWordEditText;
     private Button mLoginButton;
 
@@ -43,17 +41,6 @@ public class LoginFragment extends BaseFragment {
 
     public LoginFragment() {
         // Required empty public constructor
-    }
-
-    @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
-        try {
-            mFragmentJumpController = (FragmentJumpController) activity;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
-                    + " must implement FragmentJumpController");
-        }
     }
 
     @Override
@@ -111,10 +98,9 @@ public class LoginFragment extends BaseFragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        mFragmentJumpController = null;
     }
 
-    private void onLoginCenter(){
+    private void onLineLogin(){
         RequestParams requestParams = new RequestParams(UrlHelper.login_url);
         requestParams.addHeader("ContentType", "application/json");
         requestParams.addBodyParameter(FormKeyHelper.action, UrlHelper.login_action);
@@ -134,6 +120,7 @@ public class LoginFragment extends BaseFragment {
                         String userId = jsonObject.getString(FormKeyHelper.user_id);
                         String userImg = jsonObject.getString(FormKeyHelper.user_imageUrl);
 
+                        SharePrefUtil.saveBoolean(getActivity(), FormKeyHelper.is_offline, false);
                         SharePrefUtil.saveBoolean(getActivity(), FormKeyHelper.is_login, true);
                         SharePrefUtil.saveString(getActivity(), FormKeyHelper.user_id, userId);
                         SharePrefUtil.saveString(getActivity(), FormKeyHelper.user_name, mUserName);
@@ -168,6 +155,29 @@ public class LoginFragment extends BaseFragment {
             }
         });
         Log.d("post","posting");
+    }
+
+    private void offLineLogin(){
+        if(mUserPWordMD5.equals(UrlHelper.LOGIN_OFFLINE_PW)){
+            mChartLoadingDialog.dismiss();
+
+            SharePrefUtil.saveBoolean(getActivity(), FormKeyHelper.is_offline, true);
+            SharePrefUtil.saveBoolean(getActivity(), FormKeyHelper.is_login, true);
+            SharePrefUtil.saveString(getActivity(), FormKeyHelper.user_name, mUserName);
+
+            //跳转到主界面
+            mFragmentJumpController.onJumpToMain(mUserInfo, mBluetoothDevice, mCreateFlag, this.getClass());
+        }else{
+            Toast.makeText(getActivity(), "登录失败请重试", Toast.LENGTH_SHORT).show();
+            mChartLoadingDialog.dismiss();
+        }
+    }
+
+    private void onLoginCenter(){
+       if(mUserName.equals(UrlHelper.LOGIN_OFFLINE))
+           offLineLogin();
+        else
+           onLineLogin();
     }
 
     /** @param source 需要加密的字符串
