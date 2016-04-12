@@ -1,6 +1,5 @@
 package com.tau.blwatch.fragment;
 
-import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -10,7 +9,6 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
-import android.support.v4.app.ListFragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,12 +18,12 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.ns.nsbletizhilib.TiZhiGattAttributesHelper;
 import com.tau.blwatch.R;
 import com.tau.blwatch.callBack.BackThreadController;
 import com.tau.blwatch.callBack.FragmentJumpController;
 import com.tau.blwatch.fragment.base.BaseListFragment;
-import com.tau.blwatch.util.UserEntity;
+import com.tau.blwatch.util.DeviceMacPair;
+import com.tau.blwatch.util.HistoryDBHelper;
 
 import java.util.ArrayList;
 
@@ -40,9 +38,6 @@ import java.util.ArrayList;
  */
 
 public class DeviceListFragment extends BaseListFragment {
-
-    private FragmentJumpController mFragmentJumpController;
-    private BackThreadController mBackThreadController;
 
     /**
      * 设备列表视图
@@ -67,6 +62,9 @@ public class DeviceListFragment extends BaseListFragment {
     private static final long SCAN_PERIOD = 30000; //30秒
 
     private TextView mLeScanInfo;
+
+    private boolean isCreateByType = false;
+    private ArrayList<DeviceMacPair> mDeviceMacPairList = new ArrayList<>();
 
     // Device scan callback.
     private BluetoothAdapter.LeScanCallback mLeScanCallback =
@@ -98,23 +96,6 @@ public class DeviceListFragment extends BaseListFragment {
     public DeviceListFragment() {
     }
 
-    @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
-        try {
-            mFragmentJumpController = (FragmentJumpController) activity;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
-                    + " must implement FragmentJumpController");
-        }
-
-        try {
-            mBackThreadController = (BackThreadController) activity;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
-                    + " must implement BackThreadController");
-        }
-    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -139,6 +120,21 @@ public class DeviceListFragment extends BaseListFragment {
             Toast.makeText(getActivity(), R.string.bluetooth_not_supported, Toast.LENGTH_SHORT).show();
 //            finish();
         }
+
+        //验证是否接受了设备类型参数
+        if(mCreateFlag != null && mCreateFlag.containsKey(R.string.table_device_type)){
+            //若有设备类型约束则计算MAC地址范围
+            isCreateByType = true;
+            String typeNameStr = getActivity().getString(mCreateFlag.get(R.string.table_device_type).get(0));
+            ArrayList<String> macPairList = mDataBaseTranslator.onSelectMacPair(typeNameStr, HistoryDBHelper.DEVICE_TYPE_TABLE_NAME);
+
+            for(int i = 0; i < macPairList.size(); i += 2)
+                mDeviceMacPairList.add(new DeviceMacPair(macPairList.get(i), macPairList.get(i+1)));
+        }else{
+            //若没有约束则设定MAC地址范围为默认值
+            mDeviceMacPairList.add(new DeviceMacPair());
+        }
+
     }
 
     @Override
@@ -207,8 +203,6 @@ public class DeviceListFragment extends BaseListFragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        mBackThreadController = null;
-        mFragmentJumpController = null;
     }
 
     @Override
@@ -317,8 +311,14 @@ public class DeviceListFragment extends BaseListFragment {
          * @param device    设备信息
          */
         public void addDevice(BluetoothDevice device) {
-            if(!mLeDevices.contains(device)) {
-                mLeDevices.add(device);
+            if(isCreateByType && device != null){
+                if(inInIntervalOfAllPair(device.getAddress())
+                        && !mLeDevices.contains(device))
+                    mLeDevices.add(device);
+            }else{
+                if(!mLeDevices.contains(device)) {
+                    mLeDevices.add(device);
+                }
             }
         }
 
@@ -359,6 +359,7 @@ public class DeviceListFragment extends BaseListFragment {
                 viewHolder = (ViewHolder) view.getTag();
             }
 
+
             BluetoothDevice device = mLeDevices.get(i);
             if(device != null){
                 final String deviceName = device.getName();
@@ -377,5 +378,17 @@ public class DeviceListFragment extends BaseListFragment {
 
             return view;
         }
+    }
+
+    /**
+     * 在mDeviceMacPairList中寻找源MAC地址可能符合的地址范围
+     * @param sourceMac 源MAC地址
+     * @return 若有任一范围符合要求，则返回true，若所有范围均不符合范围，返回false
+     */
+    private boolean inInIntervalOfAllPair(String sourceMac){
+        for(DeviceMacPair deviceMacPair:mDeviceMacPairList)
+            if(deviceMacPair.inInterval(sourceMac)) return true;
+
+        return false;
     }
 }
