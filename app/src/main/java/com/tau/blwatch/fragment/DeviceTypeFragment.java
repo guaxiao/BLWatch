@@ -1,6 +1,5 @@
 package com.tau.blwatch.fragment;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -13,18 +12,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.tau.blwatch.R;
-import com.tau.blwatch.callBack.FragmentJumpController;
 import com.tau.blwatch.fragment.base.BaseListFragment;
 
 import java.util.ArrayList;
 
 public class DeviceTypeFragment extends BaseListFragment {
-    private FragmentJumpController mFragmentJumpController;
-
     private int[][] mMessageContent = {
-            {R.mipmap.band,R.string.mi_band_name},
-            {R.mipmap.watch,R.string.ptwatch_name},
-            {R.mipmap.scale,R.string.ptscale_name}};
+            {R.mipmap.watch,R.string.name_ptwatch},
+            {R.mipmap.scale,R.string.name_ptscale},
+            {R.mipmap.band,R.string.name_mi_band}};
     /**
      * 跳转条目列表视图
      */
@@ -69,20 +65,8 @@ public class DeviceTypeFragment extends BaseListFragment {
     }
 
     @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
-        try {
-            mFragmentJumpController = (FragmentJumpController) activity;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
-                    + " must implement FragmentJumpController");
-        }
-    }
-
-    @Override
     public void onDetach() {
         super.onDetach();
-        mFragmentJumpController = null;
     }
 
     //------------------------------------------ListView--------------------------------------------
@@ -113,6 +97,7 @@ public class DeviceTypeFragment extends BaseListFragment {
             final DeviceTypeItem messageItem = (DeviceTypeItem)mAdapter.getItem(position);
             if (messageItem != null){
                 putCreateFlagItem(R.string.table_device_type, messageItem.getTypeName());
+                mFragmentJumpController.onJumpToDeviceList(mUserInfo, mBluetoothDevice, mCreateFlag, this.getClass());
                 Toast.makeText(getActivity(), TAG + "onListItemClick " + position, Toast.LENGTH_SHORT).show();
             }
 

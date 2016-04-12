@@ -45,9 +45,6 @@ import lecho.lib.hellocharts.util.ChartUtils;
 import lecho.lib.hellocharts.view.ComboLineColumnChartView;
 
 public class HistoryFragment extends BaseFragment {
-    private FragmentJumpController mFragmentJumpController;
-    private DataBaseTranslator mDataBaseSelector;
-
     private static ComboLineColumnChartView chart;
     private static ComboLineColumnChartData data;
 
@@ -72,24 +69,6 @@ public class HistoryFragment extends BaseFragment {
 
     public HistoryFragment() {
         // Required empty public constructor
-    }
-
-    @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
-        try {
-            mFragmentJumpController = (FragmentJumpController) activity;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
-                    + " must implement FragmentJumpController");
-        }
-
-        try {
-            mDataBaseSelector = (DataBaseTranslator) activity;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
-                    + " must implement DataBaseTranslator");
-        }
     }
 
     @Override
@@ -228,8 +207,6 @@ public class HistoryFragment extends BaseFragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        mFragmentJumpController = null;
-        mDataBaseSelector = null;
     }
 
     //-----------------------------------------helloCharts------------------------------------------
@@ -301,7 +278,7 @@ public class HistoryFragment extends BaseFragment {
 
         //当构建指令未命中缓存时，再向数据库查询数据
         if(!hasCached){
-            tempMap = mDataBaseSelector.onSelectData(
+            tempMap = mDataBaseTranslator.onSelectChartData(
                     timeBlockEntity.startTime,
                     timeBlockEntity.numBlock,
                     timeBlockEntity.typeTimeBlock,

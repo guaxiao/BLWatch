@@ -65,9 +65,6 @@ public class WalkFragment extends BaseFragment {
     private static final String DEVICE_NSW04 = "NS-W04";
     private static final String DEVICE_MI1S = "MI1S";
 
-    private FragmentJumpController mFragmentJumpController;
-    private DataBaseTranslator mDataBaseTranslator;
-
     private ArrayList<ArrayList<BluetoothGattCharacteristic>>
             mGattCharacteristics = new ArrayList<ArrayList<BluetoothGattCharacteristic>>();// 蓝牙协议特征
     private BluetoothLeService mBluetoothLeService;
@@ -135,7 +132,7 @@ public class WalkFragment extends BaseFragment {
         }
     }
 
-    private static ViewControlHandler  mViewControlHandler = new ViewControlHandler(Looper.getMainLooper());
+    private static ViewControlHandler mViewControlHandler = new ViewControlHandler(Looper.getMainLooper());
 
     //TODO：将蓝牙手表PTWATCH的监听服务与GATT广播接收器包装成独立的类进行调用
 
@@ -208,23 +205,6 @@ public class WalkFragment extends BaseFragment {
 
     public WalkFragment() {
         // Required empty public constructor
-    }
-
-    @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
-        try {
-            mFragmentJumpController = (FragmentJumpController) activity;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
-                    + " must implement FragmentJumpController");
-        }
-        try {
-            mDataBaseTranslator = (DataBaseTranslator) activity;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
-                    + " must implement DataBaseTranslator");
-        }
     }
 
     @Override
@@ -448,9 +428,6 @@ public class WalkFragment extends BaseFragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        mFragmentJumpController = null;  //注销设备列表回调
-        mDataBaseTranslator = null;  //注销SQL-IO回调
-
         MiBandConnectHelper = null;
     }
 
@@ -478,9 +455,9 @@ public class WalkFragment extends BaseFragment {
                         if (heartValue < cacheMinHeart)
                             cacheMinHeart = heartValue;
 
-                        mDebugAvgHeart.setText(Float.toString(cacheAvgHeart));
-                        mDebugMaxHeart.setText(Float.toString(cacheMaxHeart));
-                        mDebugMinHeart.setText(Float.toString(cacheMinHeart));
+                        mDebugAvgHeart.setText(String.format("%f", cacheAvgHeart));
+                        mDebugMaxHeart.setText(String.format("%f", cacheMaxHeart));
+                        mDebugMinHeart.setText(String.format("%f", cacheMinHeart));
 
                         mDataBaseTranslator.onSendHeartToDB(
                                 heartValue, simulateMaxHeart, simulateMinHeart); //通过回调经由activity上传数据库
@@ -502,7 +479,7 @@ public class WalkFragment extends BaseFragment {
                         else
                             Log.d("StepCount","Next Part");
 
-                        mDebugStepCache.setText(Integer.toString(cacheStep));
+                        mDebugStepCache.setText(String.format("%d", cacheStep));
 
                         mDataBaseTranslator.onSendStepToDB(Integer.parseInt(data)); //通过回调经由activity上传数据库
                     }catch (java.lang.NumberFormatException e){
@@ -679,14 +656,5 @@ public class WalkFragment extends BaseFragment {
 
         // 2.开启通知
         MiBandConnectHelper.enableRealtimeStepsNotify();
-    }
-
-    //-----------------------------------------interface--------------------------------------------
-
-    /**
-     * 回调：与数据库进行交互
-     */
-    public interface OnSqlIOCallBack {
-
     }
 }

@@ -35,7 +35,6 @@ import lecho.lib.hellocharts.view.PieChartView;
 //TODO：完善饼图关于每日步数目标与已完成步数的显示
 
 public class MainFragment extends BaseListFragment{
-    private FragmentJumpController mFragmentJumpController;
 
     private int[][] mMessageContent = {
             {R.string.main_list_title_search,R.string.main_list_gist_search},
@@ -93,20 +92,8 @@ public class MainFragment extends BaseListFragment{
     }
 
     @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
-        try {
-            mFragmentJumpController = (FragmentJumpController) activity;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
-                    + " must implement FragmentJumpController");
-        }
-    }
-
-    @Override
     public void onDetach() {
         super.onDetach();
-        mFragmentJumpController = null;
     }
 
     //------------------------------------------ListView--------------------------------------------
@@ -143,6 +130,7 @@ public class MainFragment extends BaseListFragment{
                         mFragmentJumpController.onJumpToDeviceTypeList(mUserInfo, mBluetoothDevice, mCreateFlag, this.getClass());
                         break;
                     case R.string.main_list_title_history:
+                        putCreateFlagItem(R.string.table_device_history, 0);
                         mFragmentJumpController.onJumpToDeviceHistory(mUserInfo, mBluetoothDevice, mCreateFlag, this.getClass());
                         break;
                 }
