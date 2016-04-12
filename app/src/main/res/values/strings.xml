@@ -1,6 +1,8 @@
 <resources>
     <string name="app_name">BluetoothLeWatch</string>
 
+    <string name="default_email">taunioned.leb@sdu.edu.cn</string>
+
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
@@ -8,6 +10,7 @@
     <string name="action_reset_db">重置数据库</string>
     <string name="action_simulation_db">模拟注入数据</string>
     <string name="action_simulation_device">模拟设备历史</string>
+    <string name="action_simulation_device_type">模拟设备类型</string>
     <string name="action_break_link">断开链接</string>
     <string name="action_logout">注销</string>
 
@@ -53,9 +56,18 @@
     <string name="debug_text_update">手动上传缓存数据</string>
 
     <string name="table_device_type">table_设备类型</string>
-    <string name="mi_band_name">小米手环</string>
-    <string name="ptwatch_name">中弘腕表</string>
-    <string name="ptscale_name">中弘体脂秤</string>
+    <string name="table_device_history">table_设备历史</string>
+    <string name="name_mi_band">小米手环</string>
+    <string name="name_ptwatch">中弘腕表</string>
+    <string name="name_ptscale">中弘体脂秤</string>
+
+    <string name="initial_mi_band">MI1S</string>
+    <string name="initial_ptwatch">PTWatch</string>
+    <string name="initial_ptscale">PTSCALE</string>
+
+    <string name="initial_test_mi_band">T*MI1S</string>
+    <string name="initial_test_ptwatch">T*PTWatch</string>
+    <string name="initial_test_ptscale">T*PTSCALE</string>
 
     <string name="main_list_title_search">搜索周围设备</string>
     <string name="main_list_title_history">快速连接</string>
