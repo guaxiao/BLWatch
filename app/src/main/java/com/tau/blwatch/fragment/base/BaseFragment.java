@@ -1,5 +1,6 @@
 package com.tau.blwatch.fragment.base;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
@@ -8,6 +9,9 @@ import android.support.v4.app.Fragment;
 import android.util.Log;
 
 import com.tau.blwatch.R;
+import com.tau.blwatch.callBack.BackThreadController;
+import com.tau.blwatch.callBack.DataBaseTranslator;
+import com.tau.blwatch.callBack.FragmentJumpController;
 import com.tau.blwatch.util.UserEntity;
 
 import java.util.ArrayList;
@@ -22,6 +26,10 @@ import dmax.dialog.SpotsDialog;
 public class BaseFragment extends Fragment {
     protected final String TAG = getClass().getSimpleName();
     private static final String TAG_THIS = "BaseFragment";
+
+    protected FragmentJumpController mFragmentJumpController;
+    protected BackThreadController mBackThreadController;
+    protected DataBaseTranslator mDataBaseTranslator;
 
     protected static final String ARG_USER_INFO = "userInfo";
     protected static final String ARG_DEVICE = "bluetoothDevice";
@@ -69,6 +77,31 @@ public class BaseFragment extends Fragment {
     }
 
     @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+        try {
+            mFragmentJumpController = (FragmentJumpController) activity;
+        } catch (ClassCastException e) {
+            throw new ClassCastException(activity.toString()
+                    + " must implement FragmentJumpController");
+        }
+
+        try {
+            mBackThreadController = (BackThreadController) activity;
+        } catch (ClassCastException e) {
+            throw new ClassCastException(activity.toString()
+                    + " must implement BackThreadController");
+        }
+
+        try {
+            mDataBaseTranslator = (DataBaseTranslator) activity;
+        } catch (ClassCastException e) {
+            throw new ClassCastException(activity.toString()
+                    + " must implement DataBaseTranslator");
+        }
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -98,6 +131,10 @@ public class BaseFragment extends Fragment {
         mFab_top = null;
         mFab_bottom = null;
         mFab_bottom_stop= null;
+
+        mFragmentJumpController = null;
+        mBackThreadController = null;
+        mDataBaseTranslator = null;
     }
 
     protected void putCreateFlagItem(int key, int item){
