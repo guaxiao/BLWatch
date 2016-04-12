@@ -1,9 +1,15 @@
 package com.tau.blwatch;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothDevice;
+import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -37,14 +43,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
+
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
             FragmentJumpController,
             BackThreadController,
-            DataBaseTranslator,
-            WalkFragment.OnSqlIOCallBack{
+            DataBaseTranslator{
 
     private static final String	TAG_MIBAND		= "==[mibandtest]==";
 
@@ -77,6 +82,7 @@ public class MainActivity extends AppCompatActivity
         mHistoryDBHelper = new HistoryDBHelper(this);
         //在此HistoryDBHelper的源码中自动调用了openOrCreateDatabase，无需担心数据库未建立的情况
         //mHistoryDatabase = mHistoryDBHelper.getWritableDatabase();
+        mHistoryDBHelper.simulateDeviceType();
 
         //定义全局View
         setContentView(R.layout.activity_main);
@@ -170,6 +176,9 @@ public class MainActivity extends AppCompatActivity
                 return true;
             case R.id.action_simulation_device: //模拟注入设备历史
                 mHistoryDBHelper.simulateDeviceData();
+                return true;
+            case R.id.action_simulation_device_type: //模拟注入设备类型
+                mHistoryDBHelper.simulateDeviceType();
                 return true;
             case R.id.action_logout: //注销账户
                 if (!SharePrefUtil.getBoolean(this, FormKeyHelper.is_login, false)) //如果缓存数值为未登录或者无此项缓存数值
@@ -387,14 +396,35 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * 回调实现：从数据库获取数据
+     * 回调实现：从数据库获取统计界面有关图表的数据
      * @param startTime 起始时间
      * @param numBlock 时间的段数
      * @return  以DataBaseSelectHelper.createKeyName标准为Key，存储查询到的有效日期组及其对应的结果数据
      */
-    public HashMap<String,ArrayList<Float>> onSelectData(long startTime, int numBlock, String typeTimeBlock, String tableName){
+    public HashMap<String,ArrayList<Float>> onSelectChartData(long startTime, int numBlock, String typeTimeBlock, String tableName){
         DataBaseSelectHelper dataBaseSelectHelper = new DataBaseSelectHelper(mHistoryDBHelper,startTime,numBlock,typeTimeBlock,tableName);
         return dataBaseSelectHelper.getPointCollection();
+    }
+
+    /**
+     * 回调实现：从数据库获取设备选择界面有关MAC地址范围的数据
+     * @param deviceType 设备类型
+     * @param tableName 表名
+     * @return  deviceType类型的设备所在的MAC地址范围的集合（可能有多个范围），合法的返回值应该总是成对的（也可能为空）
+     */
+    public ArrayList<String> onSelectMacPair(String deviceType ,String tableName){
+        ArrayList<String> macPairList = new ArrayList<>();
+        Cursor cursor = mHistoryDBHelper.selectData(deviceType, tableName);
+
+        int startIndex = cursor.getColumnIndex(HistoryDBHelper.INFO_DEVICE_ADD_START);
+        int ENDIndex = cursor.getColumnIndex(HistoryDBHelper.INFO_DEVICE_ADD_END);
+
+        while (cursor.moveToNext()){
+            macPairList.add(cursor.getString(startIndex));
+            macPairList.add(cursor.getString(ENDIndex));
+        }
+
+        return macPairList;
     }
 
     /**
@@ -440,7 +470,7 @@ public class MainActivity extends AppCompatActivity
         // 发起源-DeviceListFragment.onResume()
         // 若用户选择不启用蓝牙
         if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
-            onJumpToMain(mUserInfo, mDevice, mCreateFlag, (Class)data.getSerializableExtra("LastFragment"));
+            onJumpToMain(mUserInfo, mDevice, mCreateFlag, DeviceListFragment.class);
         }
     }
 
